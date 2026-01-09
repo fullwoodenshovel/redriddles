@@ -2,7 +2,8 @@ name: Build releases
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -13,34 +14,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust with targets
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-gnu
+          targets: |
+            x86_64-pc-windows-gnu
+            x86_64-unknown-linux-musl
 
       - name: Install mingw for Windows cross build
-        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64 musl-tools
 
-      - name: Install Linux system deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwayland-dev \
-            libxkbcommon-dev \
-            libegl1-mesa-dev \
-            libx11-dev \
-            pkg-config
+      # Build static Linux binary
+      - name: Linux build (static MUSL)
+        run: cargo build --release --target x86_64-unknown-linux-musl
 
-      - name: Linux build (release)
-        run: cargo build --release
-
+      # Build Windows binary
       - name: Windows build (release)
         run: cargo build --release --target x86_64-pc-windows-gnu
 
+      # Optional debug artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: |
-            target/release/*
+            target/x86_64-unknown-linux-musl/release/*
             target/x86_64-pc-windows-gnu/release/*
+
+      # Publish GitHub Release
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/x86_64-unknown-linux-musl/release/redriddles
+            target/x86_64-pc-windows-gnu/release/redriddles.exe
