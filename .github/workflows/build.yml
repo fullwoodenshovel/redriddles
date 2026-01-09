@@ -40,6 +40,10 @@ jobs:
       # Build Linux binary
       - name: Linux build
         run: cargo build --release
+        
+      # Make Linux binary executable
+      - name: Make Linux binary executable
+        run: chmod +x target/release/redriddles
 
       # Build Windows binary
       - name: Windows build
