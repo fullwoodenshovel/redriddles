@@ -28,6 +28,16 @@ jobs:
       - name: Install mingw for Windows cross build
         run: sudo apt-get update && sudo apt-get install -y mingw-w64 musl-tools
 
+      - name: Install Linux system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libegl1-mesa-dev \
+            libx11-dev \
+            pkg-config
+
       # Build static Linux binary
       - name: Linux build (static MUSL)
         run: cargo build --release --target x86_64-unknown-linux-musl
