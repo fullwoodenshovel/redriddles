@@ -1,0 +1,36 @@
+name: Build releases
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: Install mingw for Windows cross build
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+
+      - name: Linux build (release)
+        run: cargo build --release
+
+      - name: Windows build (release)
+        run: cargo build --release --target x86_64-pc-windows-gnu
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            target/release/*
+            target/x86_64-pc-windows-gnu/release/*
