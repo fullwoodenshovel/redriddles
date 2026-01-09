@@ -1,7 +1,7 @@
 //! This is largely ripped out of the library, but some changes made for my use case
 use core::iter::Iterator;
 
-/// Convenient typedef for two machines-sized integers
+/// Convenient typedef for two integers
 pub type Point = [i16; 2];
 
 /// Line-drawing iterator
