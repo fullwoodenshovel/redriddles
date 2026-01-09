@@ -20,24 +20,29 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Windows cross-compiler
-        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+      - name: Add Windows target
+        run: rustup target add x86_64-pc-windows-gnu
 
-      - name: Install Linux system deps
+      - name: Install cross-compilation tools
         run: |
           sudo apt-get update
+          sudo apt-get install -y mingw-w64
+
+      - name: Install Linux graphics libraries
+        run: |
           sudo apt-get install -y \
             libwayland-dev \
             libxkbcommon-dev \
             libegl1-mesa-dev \
-            libx11-dev
+            libx11-dev \
+            pkg-config
 
-      # Build REGULAR Linux binary (not static)
-      - name: Linux build (regular)
+      # Build Linux binary
+      - name: Linux build
         run: cargo build --release
 
       # Build Windows binary
-      - name: Windows build (release)
+      - name: Windows build
         run: cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Upload artifacts
