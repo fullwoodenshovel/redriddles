@@ -5,5 +5,4 @@ pub mod colour;
 pub mod helpers;
 pub mod ui;
 pub mod node;
-pub mod debug;
 mod bresenham;
