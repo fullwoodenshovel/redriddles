@@ -2,8 +2,6 @@
 #![warn(unused_variables)]
 #![warn(unused_imports)]
 
-// TODO optimise colour picker by saving;
-
 use macroquad::prelude::*;
 
 use redriddles::ui::Frame;

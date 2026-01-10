@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use macroquad::math::{Rect, Vec2};
+use macroquad::{camera::{Camera2D, set_camera, set_default_camera}, color::{Color, WHITE}, math::{Rect, Vec2}, texture::{DrawTextureParams, FilterMode, RenderTarget, draw_texture_ex, render_target}, window::clear_background};
 use enum_dispatch::enum_dispatch;
 
 use crate::{colour::ColSelection, node::{GenHandler, New, Node, NodeStore, AppContextHandler, Store, WeakNode, ShortcutInstruction}};
@@ -78,7 +78,7 @@ impl Node for PickerNode {
         if ctx.user_inputs.left_mouse_down && ctx.user_inputs.hoverhold_test(node) {
             ctx.store.get_mut::<Picker>().detect(ctx.user_inputs.mouse, ctx.user_inputs.hoverhold_mouse);
         }
-        ctx.store.get::<Picker>().draw();
+        ctx.store.get_mut::<Picker>().draw();
 
     }
 
@@ -108,9 +108,78 @@ pub enum PickerSelection {
 pub trait ColPicker {
     fn bounding_box(&self) -> Rect;
     fn detect(&mut self, mouse: Vec2, first_mouse_down: Vec2);
-    fn draw(&self);
+    fn draw(&mut self);
     fn set_col(&mut self, col: Option<[f32; 4]>);
     fn transfer_col(&mut self, coltype: ColSelection);
     fn transfer_picker(self, pickertype: PickerSelection) -> PickerEnum;
     fn get_col_rgba(&mut self) -> Option<[f32; 4]>;
+}
+
+
+pub struct RedrawGuard<'a> {
+    surface: &'a mut SurfaceCache
+}
+
+impl<'a> Drop for RedrawGuard<'a> {
+    fn drop(&mut self) {
+        set_default_camera();
+        self.surface.render();
+    }
+}
+
+pub struct SurfaceCache {
+    dirty: bool,
+    surface: RenderTarget,
+    offset: Vec2,
+    size: Vec2
+}
+
+impl SurfaceCache {
+    pub fn new(rect: Rect) -> Self {
+        let surface = render_target(rect.w as u32, rect.h as u32);
+        surface.texture.set_filter(FilterMode::Nearest);
+        Self {
+            dirty: true,
+            surface,
+            offset: Vec2::new(rect.x, rect.y),
+            size: Vec2::new(rect.w, rect.h)
+        }
+    }
+
+    pub fn invalidate(&mut self) {
+        self.dirty = true;
+    }
+
+    fn render(&mut self) {
+        draw_texture_ex(
+            &self.surface.texture,
+            self.offset.x,
+            self.offset.y,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(self.size),
+                ..Default::default()
+            }
+        );
+    }
+
+    pub fn redraw(&mut self) -> Option<RedrawGuard<'_>> {
+        if !self.dirty {
+            self.render();
+            return None
+        }
+
+        self.dirty = false;
+
+        set_camera(&Camera2D {
+            target: self.size / 2.0,
+            zoom: Vec2::new(2.0, 2.0) / self.size,
+            render_target: Some(self.surface.clone()),
+            ..Default::default()
+        });
+
+        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
+
+        Some(RedrawGuard { surface: self })
+    }
 }
