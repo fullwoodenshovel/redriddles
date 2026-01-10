@@ -22,20 +22,12 @@ pub struct Sidebar {
     size: Vec2,
 }
 
-#[tuple_deref]
-pub struct HoverPossible(bool);
-
 impl New for Sidebar {
     fn new(handler: &mut GenHandler) -> Self { // 0 is picker, 1 is hex input, 2 is save, 3 is save grid, 4 is eraser, 5 is screen picker, 6 is line, 7 is fill
         handler.push_child::<PickerNode>();
-
-        handler.push_data(HoverPossible(false));
         handler.push_child::<HexInput>();
-        
         handler.push_child::<Save>();
-        
         handler.push_child::<SaveGrid>();
-
         handler.push_child::<Eraser>();
 
         handler.push_data(DrawState::Draw);
@@ -54,8 +46,6 @@ impl New for Sidebar {
 impl Node for Sidebar {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         self.size.y = screen_height() - 40.0;
-        let hoverhold = ctx.user_inputs.hoverhold_test(node);
-        ctx.store.overwrite(HoverPossible(hoverhold));
 
         draw_rectangle(self.start_pos.x, self.start_pos.y, self.size.x, self.size.y, GRAY);
 

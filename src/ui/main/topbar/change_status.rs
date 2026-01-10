@@ -23,12 +23,12 @@ impl<const INDEX: u8> NewInOut for ChangeStatus<INDEX> {
 }
 
 impl<const INDEX: u8> Node for ChangeStatus<INDEX> {
-    fn update(&mut self, ctx: &mut AppContextHandler, _node: &NodeStore) {
+    fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         let status = ctx.store.value::<Status<INDEX>>();
         if helpers::ui_button(
             self.rect,
             &self.name,
-            if ctx.store.value::<HoverPossible<INDEX>>() {Some(ctx.user_inputs.mouse)} else {None},
+            ctx.user_inputs.hover_test(node),
             ctx.user_inputs.left_let_go,
             if status == self.change_to { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
             if status == self.change_to { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }

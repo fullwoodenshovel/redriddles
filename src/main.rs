@@ -1,7 +1,3 @@
-#![allow(dead_code)]
-#![warn(unused_variables)]
-#![warn(unused_imports)]
-
 use macroquad::prelude::*;
 
 use redriddles::ui::Frame;

@@ -27,20 +27,20 @@ impl NewNoOut for DrawStateButton {
 
 impl Node for DrawStateButton {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
-        let hover_possible = ctx.store.value::<HoverPossible>();
+        let hovered = ctx.user_inputs.hover_test(node);
         let lasttouch = ctx.user_inputs.last_touch_test(node);
         let active = *ctx.store.get::<DrawState>() == self.new_state;
 
         helpers::ui_button(
             self.rect,
             self.name,
-            if hover_possible {Some(ctx.user_inputs.mouse)} else {None},
+            hovered,
             ctx.user_inputs.left_let_go,
             if active { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
             if active { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }
         );
 
-        if lasttouch && hover_possible && ctx.user_inputs.left_let_go {
+        if lasttouch && hovered && ctx.user_inputs.left_let_go {
             if active {
                 ctx.store.overwrite(DrawState::Draw);
             } else {

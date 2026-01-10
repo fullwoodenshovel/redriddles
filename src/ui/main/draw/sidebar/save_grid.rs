@@ -16,8 +16,8 @@ impl New for SaveGrid {
 }
 
 impl Node for SaveGrid {
-    fn update(&mut self, ctx: &mut AppContextHandler, _node: &NodeStore) {
-        let hover_possible = ctx.store.value::<HoverPossible>();
+    fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
+        let hovered = ctx.user_inputs.hover_test(node);
         let lasttouch = ctx.store.value::<LastTouch>();
         let prevlasttouch = ctx.store.value::<PrevTouch>();
 
@@ -28,7 +28,7 @@ impl Node for SaveGrid {
 
                 if col_button(
                     Rect::new(x, y, 28.0, 28.0),
-                    if hover_possible {Some(ctx.user_inputs.mouse)} else {None},
+                    hovered,
                     ctx.user_inputs.left_let_go,
                     if lasttouch { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
                     if lasttouch { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }

@@ -6,12 +6,7 @@ pub fn mouse_vec() -> Vec2 {
     vec2(x, y)
 }
 
-pub fn ui_button(rect: Rect, label: &str, mouse: Option<Vec2>, let_go: bool, default_col: Color, hover_col: Color) -> bool {
-    let hovered = match mouse {
-        Some(mouse) => rect.contains(mouse),
-        None => false
-    };
-
+pub fn ui_button(rect: Rect, label: &str, hovered: bool, let_go: bool, default_col: Color, hover_col: Color) -> bool {
     draw_rectangle(
         rect.x,
         rect.y,
@@ -31,12 +26,7 @@ pub fn ui_button(rect: Rect, label: &str, mouse: Option<Vec2>, let_go: bool, def
     hovered && let_go
 }
 
-pub fn col_button(rect: Rect, mouse: Option<Vec2>, let_go: bool, default_col: Color, hover_col: Color) -> bool {
-    let hovered = match mouse {
-        Some(mouse) => rect.contains(mouse),
-        None => false
-    };
-
+pub fn col_button(rect: Rect, hovered: bool, let_go: bool, default_col: Color, hover_col: Color) -> bool {
     draw_rectangle(
         rect.x,
         rect.y,

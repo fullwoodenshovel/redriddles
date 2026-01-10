@@ -25,12 +25,10 @@ impl New for HexInput {
 
 impl Node for HexInput {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
-        let mouse = ctx.user_inputs.mouse;
-        let hover_possible = ctx.store.value::<HoverPossible>();
         let active_possible = ctx.user_inputs.last_touch_test(node);
         let let_go = ctx.user_inputs.left_let_go;
 
-        let hovered = self.rect.contains(mouse) && hover_possible;
+        let hovered = ctx.user_inputs.hover_test(node);
 
         if hovered && let_go {
             self.active = true;
