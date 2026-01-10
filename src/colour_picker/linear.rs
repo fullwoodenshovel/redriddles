@@ -11,7 +11,7 @@ pub struct Linear {
     pub padding: f32,
     pub selected: Option<Col>,
     pub coltype: ColSelection,
-    cache: Option<[f32; 4]>
+    cache: Option<Option<[f32; 4]>>
 }
 
 impl Linear {
@@ -131,12 +131,18 @@ impl ColPicker for Linear {
     }
 
     fn get_col_rgba(&mut self) -> Option<[f32; 4]> {
-        if self.cache.is_none() { self.cache = self.selected.as_ref().map(|d| d.to_rgba()) }
-        self.cache
+        match self.cache {
+            Some(cache) => cache,
+            None => {
+                let result = self.selected.as_ref().map(|d| d.to_rgba());
+                self.cache = Some(result);
+                result
+            }
+        }
     }
 
     fn set_col(&mut self, col: Option<[f32; 4]>) {
-        self.cache = col;
+        self.cache = Some(col);
         self.selected = col.map(|d| self.coltype.col_from_rgba_arr(d));
     }
 
