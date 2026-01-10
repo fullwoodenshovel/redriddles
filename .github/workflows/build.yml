@@ -10,26 +10,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  # First job to extract version from tag
+  prepare:
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
     steps:
-      - name: Checkout
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          # Remove 'v' prefix from tag (v1.0.0 → 1.0.0)
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"  # Remove leading 'v'
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+  # Linux build
+  build-linux:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Add Windows target
-        run: rustup target add x86_64-pc-windows-gnu
-
-      - name: Install cross-compilation tools
+      - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mingw-w64
-
-      - name: Install Linux graphics libraries
-        run: |
           sudo apt-get install -y \
             libwayland-dev \
             libxkbcommon-dev \
@@ -37,25 +46,155 @@ jobs:
             libx11-dev \
             pkg-config
 
-      # Build Linux binary
-      - name: Linux build
+      - name: Build for Linux
         run: cargo build --release
 
-      # Build Windows binary
-      - name: Windows build
-        run: cargo build --release --target x86_64-pc-windows-gnu
+      - name: Rename Linux binary
+        run: |
+          mv target/release/redriddles \
+            "redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64"
 
-      - name: Upload artifacts
+      - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
-          path: |
-            target/release/redriddles
-            target/x86_64-pc-windows-gnu/release/redriddles.exe
+          name: linux-binary
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64"
 
-      - name: Publish GitHub Release
+  # Windows build
+  build-windows:
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build for Windows
+        run: cargo build --release
+
+      - name: Rename Windows binary
+        run: |
+          Move-Item target/release/redriddles.exe `
+            "redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe"
+
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binary
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe"
+
+  # macOS Intel build
+  build-macos-intel:
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build for macOS (Intel)
+        run: cargo build --release
+
+      - name: Rename macOS Intel binary
+        run: |
+          mv target/release/redriddles \
+            "redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64"
+
+      - name: Upload macOS Intel binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-intel-binary
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64"
+
+  # macOS ARM build (Apple Silicon)
+  build-macos-arm:
+    needs: prepare
+    runs-on: macos-latest-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build for macOS (ARM)
+        run: cargo build --release
+
+      - name: Rename macOS ARM binary
+        run: |
+          mv target/release/redriddles \
+            "redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64"
+
+      - name: Upload macOS ARM binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm-binary
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64"
+
+  # Create the release with all binaries
+  create-release:
+    needs: [prepare, build-linux, build-windows, build-macos-intel, build-macos-arm]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release-files
+
+      - name: List downloaded files
+        run: |
+          echo "Downloaded files:"
+          find release-files -type f
+
+      - name: Create release notes
+        run: |
+          cat > RELEASE_NOTES.md << EOF
+          # Red Riddles v${{ needs.prepare.outputs.version }}
+          
+          ## Downloads
+          
+          Choose the file for your operating system:
+          
+          ### Windows
+          - **redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe** - For Windows 10/11 (64-bit)
+          
+          ### Linux
+          - **redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64** - For Linux (64-bit)
+            - May require: \`sudo apt install libx11-6 libegl1\` or equivalent
+          
+          ### macOS
+          - **redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64** - For Intel Macs
+          - **redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64** - For Apple Silicon (M1/M2/M3) Macs
+          
+          ## How to run
+          
+          ### Windows
+          1. Download the .exe file
+          2. Double-click to run
+          
+          ### Linux
+          1. Download the Linux binary
+          2. Make it executable: \`chmod +x redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64\`
+          3. Run: \`./redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64\`
+          
+          ### macOS
+          1. Download the appropriate binary for your Mac
+          2. You may need to right-click and select "Open" the first time (Gatekeeper)
+          3. Or run from terminal: \`chmod +x redriddles-* && ./redriddles-*\`
+          EOF
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.ref_name }}
+          name: Release v${{ needs.prepare.outputs.version }}
+          body_path: RELEASE_NOTES.md
           files: |
-            target/release/redriddles
-            target/x86_64-pc-windows-gnu/release/redriddles.exe
+            release-files/linux-binary/redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64
+            release-files/windows-binary/redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe
+            release-files/macos-intel-binary/redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64
+            release-files/macos-arm-binary/redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64
