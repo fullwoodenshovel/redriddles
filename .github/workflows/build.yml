@@ -85,59 +85,44 @@ jobs:
           name: windows-binary
           path: "redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe"
 
-  # macOS Intel build
-  build-macos-intel:
+  # macOS Universal build (Intel + ARM)
+  build-macos-universal:
     needs: prepare
-    runs-on: macos-latest
+    runs-on: macos-latest  # Use regular macOS runner (more available)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust with both macOS targets
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
 
+      # Build for Intel Macs
       - name: Build for macOS (Intel)
-        run: cargo build --release
+        run: cargo build --release --target x86_64-apple-darwin
 
-      - name: Rename macOS Intel binary
-        run: |
-          mv target/release/redriddles \
-            "redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64"
-
-      - name: Upload macOS Intel binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-intel-binary
-          path: "redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64"
-
-  # macOS ARM build (Apple Silicon)
-  build-macos-arm:
-    needs: prepare
-    runs-on: macos-latest-arm
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
+      # Build for Apple Silicon Macs
       - name: Build for macOS (ARM)
-        run: cargo build --release
+        run: cargo build --release --target aarch64-apple-darwin
 
-      - name: Rename macOS ARM binary
+      # Combine both architectures into one universal binary
+      - name: Create universal macOS binary
         run: |
-          mv target/release/redriddles \
-            "redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64"
+          lipo -create \
+            target/x86_64-apple-darwin/release/redriddles \
+            target/aarch64-apple-darwin/release/redriddles \
+            -output "redriddles-v${{ needs.prepare.outputs.version }}-macos-universal"
 
-      - name: Upload macOS ARM binary
+      - name: Upload macOS universal binary
         uses: actions/upload-artifact@v4
         with:
-          name: macos-arm-binary
-          path: "redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64"
+          name: macos-universal-binary
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-macos-universal"
 
   # Create the release with all binaries
   create-release:
-    needs: [prepare, build-linux, build-windows, build-macos-intel, build-macos-arm]
+    needs: [prepare, build-linux, build-windows, build-macos-universal]
     runs-on: ubuntu-latest
     steps:
       - name: Download all binaries
@@ -167,8 +152,7 @@ jobs:
             - May require: \`sudo apt install libx11-6 libegl1\` or equivalent
           
           ### macOS
-          - **redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64** - For Intel Macs
-          - **redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64** - For Apple Silicon (M1/M2/M3) Macs
+          - **redriddles-v${{ needs.prepare.outputs.version }}-macos-universal** - Universal binary for ALL Macs (Intel & Apple Silicon)
           
           ## How to run
           
@@ -182,9 +166,13 @@ jobs:
           3. Run: \`./redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64\`
           
           ### macOS
-          1. Download the appropriate binary for your Mac
+          1. Download the universal binary
           2. You may need to right-click and select "Open" the first time (Gatekeeper)
-          3. Or run from terminal: \`chmod +x redriddles-* && ./redriddles-*\`
+          3. Or run from terminal: \`chmod +x redriddles-v${{ needs.prepare.outputs.version }}-macos-universal && ./redriddles-v${{ needs.prepare.outputs.version }}-macos-universal\`
+          
+          ## Notes
+          - The macOS binary works on both Intel Macs and Apple Silicon (M1/M2/M3) Macs
+          - No need to choose between different macOS versions
           EOF
 
       - name: Create GitHub Release
@@ -196,5 +184,4 @@ jobs:
           files: |
             release-files/linux-binary/redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64
             release-files/windows-binary/redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe
-            release-files/macos-intel-binary/redriddles-v${{ needs.prepare.outputs.version }}-macos-x86_64
-            release-files/macos-arm-binary/redriddles-v${{ needs.prepare.outputs.version }}-macos-aarch64
+            release-files/macos-universal-binary/redriddles-v${{ needs.prepare.outputs.version }}-macos-universal
