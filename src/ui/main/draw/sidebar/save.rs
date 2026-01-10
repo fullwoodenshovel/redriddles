@@ -36,11 +36,11 @@ impl Node for Save {
                 "Save colour",
                 hovered,
                 ctx.user_inputs.left_let_go,
-                if lasttouch { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
-                if lasttouch { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }
+                if lasttouch { DISABLEDHOVERCOL } else { DISABLEDCOL },
+                if lasttouch { ENABLEDHOVERCOL } else { ENABLEDCOL }
             );
 
-            draw_rectangle(115.0, 380.0, 28.0, 28.0, LIGHTGRAY);
+            draw_rectangle(115.0, 380.0, 28.0, 28.0, DISABLEDCOL);
             draw_rectangle(120.0, 385.0, 18.0, 18.0, arr_to_macroquad(col));
         }
     }

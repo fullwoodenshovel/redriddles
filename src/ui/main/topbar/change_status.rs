@@ -30,8 +30,8 @@ impl<const INDEX: u8> Node for ChangeStatus<INDEX> {
             &self.name,
             ctx.user_inputs.hover_test(node),
             ctx.user_inputs.left_let_go,
-            if status == self.change_to { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
-            if status == self.change_to { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }
+            if status == self.change_to { DISABLEDHOVERCOL } else { DISABLEDCOL },
+            if status == self.change_to { ENABLEDHOVERCOL } else { ENABLEDCOL }
         ) {
             ctx.store.set::<Status<INDEX>>(self.change_to);
         }

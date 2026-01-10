@@ -10,7 +10,6 @@ impl New for Eraser {
         Self {
             rect: Rect::new(10.0, 482.0, 133.0, 28.0),
         }
-
     }
 }
 
@@ -24,8 +23,8 @@ impl Node for Eraser {
             "Eraser",
             hovered,
             ctx.user_inputs.left_let_go,
-            if active { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
-            if active { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }
+            if active { DISABLEDHOVERCOL } else { DISABLEDCOL },
+            if active { ENABLEDHOVERCOL } else { ENABLEDCOL }
         ) {
             ctx.store.get_mut::<Picker>().set_col(None);
         }
