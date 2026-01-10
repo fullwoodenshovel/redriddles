@@ -138,7 +138,7 @@ jobs:
       - name: Create release notes
         run: |
           cat > RELEASE_NOTES.md << EOF
-          # Red Riddles v${{ needs.prepare.outputs.version }}
+          # Redriddles v${{ needs.prepare.outputs.version }}
           
           ## Downloads
           
