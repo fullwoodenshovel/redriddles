@@ -7,14 +7,14 @@ pub struct Topbar<const INDEX: u8> {
 }
 
 #[tuple_deref]
-pub struct HoverPossible(bool);
+pub struct HoverPossible<const INDEX: u8>(bool);
 
 impl<const INDEX: u8> NewNoOut for Topbar<INDEX> {
-    type InType = Box<[(&'static str, Rect, u8)]>;
-    fn new(data: Self::InType, handler: &mut GenHandler) -> Self {
-        handler.push_data(HoverPossible(false));
-        for (name, rect, index) in data {
-            handler.push_child_io::<ChangeStatus<INDEX>>((name.to_string(), rect, index));
+    type InType = (f32, Box<[&'static str]>);
+    fn new((mut x_offset, names): Self::InType, handler: &mut GenHandler) -> Self {
+        handler.push_data(HoverPossible::<INDEX>(false));
+        for (index, name) in names.iter().enumerate() {
+            x_offset += 6.0 + handler.push_child_io::<ChangeStatus<INDEX>>((name.to_string(), x_offset, index as u8));
         }
 
         Self {
@@ -29,7 +29,7 @@ impl<const INDEX: u8> Node for Topbar<INDEX> {
         let starty = INDEX as f32 * 40.0;
         draw_rectangle(0.0, starty, self.size.x, self.size.y, DARKGRAY);
         draw_text("Pixel Editor.", 10.0, starty + 26.0, 22.0, WHITE);
-        **ctx.store.get_mut::<HoverPossible>() = ctx.user_inputs.hoverhold_test(node);
+        ctx.store.set::<HoverPossible<INDEX>>(ctx.user_inputs.hoverhold_test(node));
         node.update_children(ctx);
     }
 

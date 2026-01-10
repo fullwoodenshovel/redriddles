@@ -16,18 +16,22 @@ pub struct Main {
 pub struct Status<const INDEX: u8>(u8);
 
 impl New for Main {
-    fn new(handler: &mut GenHandler) -> Self { // 0 is topbar, 1 is draw, 2 is settings, 3 is export
-        handler.push_data(Status::<0>(1));
-        handler.push_child_io::<Topbar<0>>(
-            Box::new([
-                ("Draw", Rect::new(160.0, 5.0, 75.0, 28.0), 1),
-                ("Settings", Rect::new(240.0, 5.0, 75.0, 28.0), 2),
-                ("Export", Rect::new(320.0, 5.0, 75.0, 28.0), 3),
-            ])
-        );
+    fn new(handler: &mut GenHandler) -> Self { // 0 is draw, 1 is settings, 2 is export, 3 is topbar
+                                               // THINGS ARE DEPENDENT ON THIS. Change with care.
         handler.push_child::<Draw>();
         handler.push_child::<Settings>();
         handler.push_child::<Export>();
+
+        handler.push_data(Status::<0>(0));
+        handler.push_child_io::<Topbar<0>>((
+            156.0,
+            Box::new([
+                "Draw",
+                "Settings",
+                "Export",
+            ])
+        ));
+
         Self {}
     }
 }
@@ -37,15 +41,15 @@ impl Node for Main {
         let children = node.get_children();
         let status = ctx.store.value::<Status<0>>();
         children[status as usize].update(ctx);
-        if status == 3 {
-            ctx.store.set::<Status<0>>(1);
+        if status == 2 {
+            ctx.store.set::<Status<0>>(0);
         } // TEMPORARY. THIS DISABLES EXPORT TAB, IT ONLY GETS ENABLED FOR ONE FRAME
-        children[0].update(ctx);
+        children[3].update(ctx);
     }
 
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
         let children = node.get_children();
-        let mut result = children[0].hit_detect(pos, store);
+        let mut result = children[3].hit_detect(pos, store);
         if result.is_empty() {
             result = node.get_children()[store.value::<Status<0>>() as usize].hit_detect(pos, store);
         }
