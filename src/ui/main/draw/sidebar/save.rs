@@ -1,5 +1,3 @@
-use crate::ui::main::topbar::HoverPossible;
-
 use super::*;
 use colour_picker::Picker;
 
