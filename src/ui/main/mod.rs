@@ -25,6 +25,7 @@ impl New for Main {
         handler.push_data(Status::<0>(0));
         handler.push_child_io::<Topbar<0>>((
             156.0,
+            "Pixel Editor",
             Box::new([
                 "Draw",
                 "Settings",

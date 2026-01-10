@@ -16,7 +16,7 @@ impl<const INDEX: u8> NewInOut for ChangeStatus<INDEX> {
             Self {
                 name,
                 change_to,
-                rect: Rect::new(x_offset, INDEX as f32 * 40.0 + 6.0, text_width + 16.0, 28.0)
+                rect: Rect::new(x_offset, INDEX as f32 * 42.0 + 6.0, text_width + 16.0, 28.0)
             }
         )
     }

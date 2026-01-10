@@ -12,6 +12,7 @@ impl New for Settings {
         handler.push_data(Status::<1>(0));
         handler.push_child_io::<Topbar<1>>((
             156.0,
+            "Settings",
             Box::new([
                 "Something",
                 "Completely",
