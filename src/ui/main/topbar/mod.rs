@@ -8,7 +8,10 @@ pub struct Topbar<const INDEX: u8> {
 }
 
 #[tuple_deref]
-pub struct HoverPossible<const INDEX: u8>(bool);
+pub struct HoverPossible<const INDEX: u8>(pub bool);
+
+#[tuple_deref]
+pub struct Status<const INDEX: u8>(pub u8);
 
 impl<const INDEX: u8> NewNoOut for Topbar<INDEX> {
     type InType = (f32, &'static str, Box<[&'static str]>);

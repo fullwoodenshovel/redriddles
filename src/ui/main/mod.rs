@@ -3,7 +3,7 @@ mod topbar;
 mod draw;
 mod settings;
 mod export;
-use topbar::Topbar;
+use topbar::{Topbar, Status};
 use draw::Draw;
 use settings::Settings;
 use export::Export;
@@ -11,9 +11,6 @@ pub use draw::DrawState;
 
 pub struct Main {
 }
-
-#[tuple_deref]
-pub struct Status<const INDEX: u8>(u8);
 
 impl New for Main {
     fn new(handler: &mut GenHandler) -> Self { // 0 is draw, 1 is settings, 2 is export, 3 is topbar
