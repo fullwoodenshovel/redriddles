@@ -16,9 +16,9 @@ impl New for HexInput {
             rect: Rect::new(10.0, 414.0, 133.0, 28.0),
             text: String::from("#"),
             active: false,
-            default_col: LIGHTGRAY,
-            hover_col: Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 },
-            active_col: Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 }
+            default_col: DISABLEDCOL,
+            hover_col: ENABLEDCOL,
+            active_col: DISABLEDHOVERCOL
         }
     }
 }
