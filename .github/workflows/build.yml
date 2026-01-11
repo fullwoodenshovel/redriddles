@@ -177,10 +177,16 @@ jobs:
         run: |
           cat > RELEASE_NOTES.md << EOF
           # Redriddles v${{ needs.prepare.outputs.version }}
+
+          ## What's new
+          This is stuff important for the end user, basically the technical changes, but summarised and less important changes ignored.
+          These are the new features:
+
+          - ADD SUMMARY
           
-          ## What's New
-          These are all the new commits from this release.
-          This may include technical changes, architectural changes, bug fixed, ect:
+          ## Technical changes
+          These are all of the new commits from this release (ignoring repeats).
+          This may include technical changes, architectural changes, bug fixes, ect:
           
           ${{ steps.changelog.outputs.changelog }}
           
