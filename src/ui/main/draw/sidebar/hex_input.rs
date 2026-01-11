@@ -17,8 +17,8 @@ impl New for HexInput {
             text: String::from("#"),
             active: false,
             default_col: DISABLEDCOL,
-            hover_col: ENABLEDCOL,
-            active_col: DISABLEDHOVERCOL
+            hover_col: DISABLEDHOVERCOL,
+            active_col: ENABLEDCOL
         }
     }
 }

@@ -57,7 +57,7 @@ pub struct PickerNode;
 
 impl Node for PickerNode {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
-        if let ShortcutInstruction::ChangePickerType(pickertype) = ctx.user_inputs.pressed_shortcut {
+        if let ShortcutInstruction::ChangePickerType(pickertype) = ctx.user_inputs.pressed_instruction {
             let picker = ctx.store.get_mut::<Picker>();
             match pickertype {
                 ColSelection::Rgba => {

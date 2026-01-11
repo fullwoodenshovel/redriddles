@@ -39,9 +39,9 @@ impl Node for DrawSection {
         self.prev_touch = None;
 
         // ---------------- DRAW AREA ----------------
-        if let ShortcutInstruction::ChangeDrawState(state) = ctx.user_inputs.pressed_shortcut {
+        if let ShortcutInstruction::ChangeDrawState(state) = ctx.user_inputs.pressed_instruction {
             ctx.store.overwrite(state);
-        } else if let ShortcutInstruction::Eraser = ctx.user_inputs.pressed_shortcut {
+        } else if let ShortcutInstruction::Eraser = ctx.user_inputs.pressed_instruction {
             ctx.store.get_mut::<Picker>().set_col(None);
         }
         if hoverhold && hover {

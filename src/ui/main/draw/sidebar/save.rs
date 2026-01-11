@@ -36,8 +36,8 @@ impl Node for Save {
                 "Save colour",
                 hovered,
                 ctx.user_inputs.left_let_go,
-                if lasttouch { DISABLEDHOVERCOL } else { DISABLEDCOL },
-                if lasttouch { ENABLEDHOVERCOL } else { ENABLEDCOL }
+                if lasttouch { ENABLEDCOL } else { DISABLEDCOL },
+                if lasttouch { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
             );
 
             draw_rectangle(115.0, 380.0, 28.0, 28.0, DISABLEDCOL);

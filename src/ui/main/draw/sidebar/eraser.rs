@@ -23,8 +23,8 @@ impl Node for Eraser {
             "Eraser",
             hovered,
             ctx.user_inputs.left_let_go,
-            if active { DISABLEDHOVERCOL } else { DISABLEDCOL },
-            if active { ENABLEDHOVERCOL } else { ENABLEDCOL }
+            if active { ENABLEDCOL } else { DISABLEDCOL },
+            if active { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
         ) {
             ctx.store.get_mut::<Picker>().set_col(None);
         }
