@@ -16,6 +16,11 @@ jobs:
     outputs:
       version: ${{ steps.extract_version.outputs.version }}
     steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get all history for git log
+
       - name: Extract version from tag
         id: extract_version
         run: |
@@ -88,7 +93,7 @@ jobs:
   # macOS Universal build (Intel + ARM)
   build-macos-universal:
     needs: prepare
-    runs-on: macos-latest  # Use regular macOS runner (more available)
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -125,24 +130,61 @@ jobs:
     needs: [prepare, build-linux, build-windows, build-macos-universal]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get all history
+
       - name: Download all binaries
         uses: actions/download-artifact@v4
         with:
           path: release-files
 
-      - name: List downloaded files
+      - name: Generate changelog from commits
+        id: changelog
         run: |
-          echo "Downloaded files:"
-          find release-files -type f
+          # Get current tag
+          CURRENT_TAG="${{ github.ref_name }}"
+          
+          # Try to get previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            # Get commits between previous tag and current tag
+            echo "Getting commits from $PREVIOUS_TAG to $CURRENT_TAG"
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges "${PREVIOUS_TAG}..${CURRENT_TAG}" 2>/dev/null)
+          else
+            # First release - get all commits
+            echo "First release, getting all commits"
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges 2>/dev/null)
+          fi
+          
+          # If no commits found, use default
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- Bug fixes and improvements"
+          fi
+          
+          # Count commits for debugging
+          COMMIT_COUNT=$(echo "$COMMITS" | wc -l)
+          echo "Found $COMMIT_COUNT commits"
+          
+          # Store in output
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create release notes
         run: |
           cat > RELEASE_NOTES.md << EOF
           # Redriddles v${{ needs.prepare.outputs.version }}
           
-          ## Downloads
+          ## What's New
+          These are all the new commits from this release.
+          This may include technical changes, architectural changes, bug fixed, ect:
           
-          Choose the file for your operating system:
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## Downloads
           
           ### Windows
           - **redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe** - For Windows 10/11 (64-bit)
@@ -174,6 +216,10 @@ jobs:
           - The macOS binary works on both Intel Macs and Apple Silicon (M1/M2/M3) Macs
           - No need to choose between different macOS versions
           EOF
+          
+          # Debug: show what was generated
+          echo "=== Generated Release Notes ==="
+          cat RELEASE_NOTES.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
