@@ -1,4 +1,3 @@
-pub mod context;
 pub mod transform;
 pub mod colour_picker;
 pub mod colour;
