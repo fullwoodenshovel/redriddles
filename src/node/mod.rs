@@ -4,25 +4,27 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 mod user_inputs;
-pub use user_inputs::{UserInputs, ShortcutInstruction};
+pub use user_inputs::{UserInputs, ShortcutInstruction, Shortcuts};
 
 use macroquad::prelude::*;
 
 
 struct AppContext {
     user_inputs: UserInputs,
-    store: Store
+    store: Store,
+    shortcuts: Shortcuts
 }
 
 impl AppContext {
     fn get_handler(&'_ mut self) -> AppContextHandler<'_> {
-        AppContextHandler { user_inputs: &self.user_inputs, store: &mut self.store }
+        AppContextHandler { user_inputs: &self.user_inputs, store: &mut self.store, shortcuts: &mut self.shortcuts }
     }
 }
 
 pub struct AppContextHandler<'a> {
     pub user_inputs: &'a UserInputs,
-    pub store: &'a mut Store
+    pub store: &'a mut Store,
+    pub shortcuts: &'a mut Shortcuts
 }
 
 pub struct Store {
@@ -57,30 +59,18 @@ impl Store {
     }
 
     #[allow(private_bounds)]
-    pub fn set<T: Any + DerefMutSized>(&mut self, value: T::Target) {
+    pub fn set<T: Any + DerefMut>(&mut self, value: T::Target)
+    where <T as Deref>::Target: Sized
+    {
         **self.get_mut::<T>() = value;
     }
 
     #[allow(private_bounds)]
-    pub fn value<T: Any + DerefCopy>(&self) -> T::Target {
+    pub fn value<T: Any + Deref>(&self) -> T::Target
+    where T::Target: Copy
+    {
         **self.get::<T>()
     }
-}
-
-trait DerefMutSized: DerefMut<Target = Self::T> {
-    type T: Sized;
-}
-
-impl<T: DerefMut<Target = I>, I: Sized> DerefMutSized for T {
-    type T = T::Target;
-}
-
-trait DerefCopy: DerefMut<Target = Self::T> {
-    type T: Sized + Copy;
-}
-
-impl<T: DerefMut<Target = I>, I: Sized + Copy> DerefCopy for T {
-    type T = T::Target;
 }
 
 pub struct AppContextGenHandler {
@@ -105,7 +95,7 @@ impl AppContextGenHandler {
     }
 
     fn into_context(self, user_inputs: UserInputs) -> AppContext {
-        AppContext { user_inputs, store: self.store }
+        AppContext { user_inputs, store: self.store, shortcuts: Shortcuts::default() }
     }
 }
 
@@ -184,6 +174,13 @@ pub trait Node: AsAny {
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode>;
 }
 
+#[cfg(feature = "hit_detect_debug")]
+trait AsAny: AsAnyDebug {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+#[cfg(not(feature = "hit_detect_debug"))]
 trait AsAny {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -197,31 +194,43 @@ pub trait AsAnyExt: AsAny {
     fn get_self_mut<T: Node + 'static>(&mut self) -> &mut T;
 }
 
+#[cfg(feature = "hit_detect_debug")]
+trait AsAnyDebug {
+    fn get_name(&self) -> &'static str;
+}
+
 impl<A: Any + Node> AsAny for A {
     fn as_any(&self) -> &dyn Any {
         self
     }
-
+    
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 }
 
-impl<A: AsAny> AsAnyExt for A {
+impl<A: AsAny + ?Sized> AsAnyExt for A {
     fn try_get_self<T: Node + 'static>(&self) -> Option<&T> {
         self.as_any().downcast_ref()
     }
-
+    
     fn try_get_self_mut<T: Node + 'static>(&mut self) -> Option<&mut T> {
         self.as_any_mut().downcast_mut()
     }
-
+    
     fn get_self<T: Node + 'static>(&self) -> &T {
         self.try_get_self().unwrap_or_else(|| panic!("In `get_self`, {DOWNCAST_FAILED}"))
     }
-
+    
     fn get_self_mut<T: Node + 'static>(&mut self) -> &mut T {
         self.try_get_self_mut().unwrap_or_else(|| panic!("In `get_self_mut`, {DOWNCAST_FAILED}"))
+    }
+}
+
+#[cfg(feature = "hit_detect_debug")]
+impl<A: AsAny + ?Sized> AsAnyDebug for A {
+    fn get_name(&self) -> &'static str {
+        std::any::type_name::<A>()
     }
 }
 
@@ -412,7 +421,22 @@ impl Frame {
     }
 
     pub async fn update(&mut self) {
-        self.ctx.user_inputs.update(&mut self.ctx.store);
+        self.ctx.user_inputs.update(&mut self.ctx.store, &self.ctx.shortcuts);
+        #[cfg(feature = "hit_detect_debug")]
+        if !(self.ctx.user_inputs.prev_hover_focus.len() == self.ctx.user_inputs.hover_focus.len() &&
+            self.ctx.user_inputs.prev_hover_focus.iter().enumerate().all(|(i, d)| d.ptr_eq(&self.ctx.user_inputs.hover_focus[i])))
+        {
+            println!("{}", self.ctx.user_inputs.hover_focus.iter().map(|d| d
+                .upgrade()
+                .unwrap()
+                .node
+                .borrow()
+                .get_name()
+                .rsplit_once(":")
+                .unwrap()
+                .1
+            ).collect::<Vec<_>>().join("  <--  "));
+        }
         self.origin.get_handler().update(&mut self.ctx.get_handler());
         next_frame().await;
     }

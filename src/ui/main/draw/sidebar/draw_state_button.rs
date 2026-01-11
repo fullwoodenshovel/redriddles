@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -5,7 +7,18 @@ pub enum DrawState {
     Line,
     Fill,
     Picker,
-    Draw
+    Draw,
+}
+
+impl Display for DrawState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Line => write!(f, "Line"),
+            Self::Fill => write!(f, "Fill"),
+            Self::Picker => write!(f, "Picker"),
+            Self::Draw => write!(f, "Draw"),
+        }
+    }
 }
 
 pub struct DrawStateButton {
@@ -36,8 +49,8 @@ impl Node for DrawStateButton {
             self.name,
             hovered,
             ctx.user_inputs.left_let_go,
-            if active { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
-            if active { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }
+            if active { ENABLEDCOL } else { DISABLEDCOL },
+            if active { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
         );
 
         if lasttouch && hovered && ctx.user_inputs.left_let_go {

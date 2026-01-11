@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::*;
 mod topbar;
 mod draw;
@@ -12,9 +14,27 @@ pub use draw::DrawState;
 pub struct Main {
 }
 
+#[derive(Hash, Eq, PartialEq, Clone, Copy)]
+pub enum Tab {
+    Draw,
+    Settings,
+    Export
+}
+
+impl Display for Tab {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Draw => write!(f, "Draw"),
+            Self::Settings => write!(f, "Settings"),
+            Self::Export => write!(f, "Export"),
+        }
+    }
+}
+
 impl New for Main {
-    fn new(handler: &mut GenHandler) -> Self { // 0 is draw, 1 is settings, 2 is export, 3 is topbar
-                                               // THINGS ARE DEPENDENT ON THIS. Change with care.
+    // 0 is draw, 1 is settings, 2 is export, 3 is topbar
+    // THINGS ARE DEPENDENT ON THIS. Change with care.
+    fn new(handler: &mut GenHandler) -> Self {
         handler.push_child::<Draw>();
         handler.push_child::<Settings>();
         handler.push_child::<Export>();
@@ -36,6 +56,14 @@ impl New for Main {
 
 impl Node for Main {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
+        if let ShortcutInstruction::GoTo(tab) = ctx.user_inputs.pressed_instruction {
+            match tab {
+                Tab::Draw => ctx.store.set::<Status<0>>(0),
+                Tab::Settings => ctx.store.set::<Status<0>>(1),
+                Tab::Export => ctx.store.set::<Status<0>>(2),
+            }
+        }
+
         let children = node.get_children();
         let status = ctx.store.value::<Status<0>>();
         children[status as usize].update(ctx);

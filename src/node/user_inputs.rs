@@ -1,5 +1,7 @@
+use std::fmt::{Display, Error};
+
 use crate::ui::ColSelection;
-use crate::ui::main::DrawState;
+use crate::ui::main::{DrawState, Tab};
 use bimap::BiMap;
 use crate::helpers::*;
 use macroquad::prelude::*;
@@ -13,10 +15,42 @@ pub enum ShortcutInstruction {
     SaveCol,
     ToggleGrid,
     ChangePickerType(ColSelection),
+    GoTo(Tab)
+}
+
+const ORDER: [ShortcutInstruction; 13] = [
+    ShortcutInstruction::ChangeDrawState(DrawState::Draw),
+    ShortcutInstruction::ChangeDrawState(DrawState::Fill),
+    ShortcutInstruction::ChangeDrawState(DrawState::Line),
+    ShortcutInstruction::ChangeDrawState(DrawState::Picker),
+    ShortcutInstruction::Eraser,
+    ShortcutInstruction::SaveCol,
+    ShortcutInstruction::ToggleGrid,
+    ShortcutInstruction::ChangePickerType(ColSelection::Hsva),
+    ShortcutInstruction::ChangePickerType(ColSelection::Rgba),
+    ShortcutInstruction::ChangePickerType(ColSelection::OkLab),
+    ShortcutInstruction::GoTo(Tab::Draw),
+    ShortcutInstruction::GoTo(Tab::Settings),
+    ShortcutInstruction::GoTo(Tab::Export),
+];
+
+impl Display for ShortcutInstruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => Err(Error),
+            Self::ChangeDrawState(draw_state) => write!(f, "Change draw state to {}", draw_state),
+            Self::Eraser => write!(f, "Eraser"),
+            Self::SaveCol => write!(f, "Save colour"),
+            Self::ToggleGrid => write!(f, "Toggle grid"),
+            Self::ChangePickerType(col_type) => write!(f, "Change picker colour space to {}", col_type),
+            Self::GoTo(tab) => write!(f, "Go to {}", tab),
+        }
+    }
 }
 
 pub struct Shortcuts {
-    shortcuts: BiMap<Vec<KeyCode>, ShortcutInstruction>
+    shortcuts: BiMap<Vec<KeyCode>, ShortcutInstruction>,
+    empty: Vec<KeyCode>
 }
 
 impl Default for Shortcuts {
@@ -33,40 +67,54 @@ impl Default for Shortcuts {
                 (vec![KeyCode::D], ShortcutInstruction::ChangeDrawState(DrawState::Draw)),
                 (vec![KeyCode::P], ShortcutInstruction::ChangeDrawState(DrawState::Picker)),
                 (vec![KeyCode::G], ShortcutInstruction::ToggleGrid),
-            ].into_iter().map(|(mut key, value)| {
-                Self::sort_key(&mut key);
-                (key, value)
-            }).collect()
+                (vec![KeyCode::LeftControl, KeyCode::D], ShortcutInstruction::GoTo(Tab::Draw)),
+                (vec![KeyCode::LeftControl, KeyCode::S], ShortcutInstruction::GoTo(Tab::Settings)),
+                (vec![KeyCode::LeftControl, KeyCode::E], ShortcutInstruction::GoTo(Tab::Export)),
+            ].into_iter().collect(),
+            empty: Vec::new()
         }
     }
 }
 
 impl Shortcuts {
-    pub fn insert_no_overwrite(&mut self, mut key: Vec<KeyCode>, value: ShortcutInstruction) -> Result<(), (Vec<KeyCode>, ShortcutInstruction)> {
-        Self::sort_key(&mut key);
+    pub fn insert_no_overwrite(&mut self, key: Vec<KeyCode>, value: ShortcutInstruction) -> Result<(), (Vec<KeyCode>, ShortcutInstruction)> {
         self.shortcuts.insert_no_overwrite(key, value)
     }
 
-    pub fn insert(&mut self, mut key: Vec<KeyCode>, value: ShortcutInstruction) {
-        Self::sort_key(&mut key);
-        self.shortcuts.insert(key, value);
+    pub fn insert(&mut self, shortcut: Vec<KeyCode>, instruction: ShortcutInstruction) {
+        self.shortcuts.insert(shortcut, instruction);
     }
 
-    pub fn get_shortcuts(&self) -> Vec<(&Vec<KeyCode>, ShortcutInstruction)> {
-        self.shortcuts.iter().map(|(k, &v)| (k, v)).collect()
+    pub fn discard(&mut self, instruction: ShortcutInstruction) {
+        self.shortcuts.remove_by_right(&instruction);
     }
 
-    pub fn get_output(&self, shortcut: &mut Vec<KeyCode>) -> ShortcutInstruction {
-        Self::sort_key(shortcut);
-        *self.shortcuts.get_by_left(shortcut).unwrap_or(&ShortcutInstruction::None)
+    pub fn get_shortcuts(&self) -> impl Iterator<Item = (&Vec<KeyCode>, ShortcutInstruction)> {
+        ORDER.iter().map(|&d| match self.shortcuts.get_by_right(&d) {
+                Some(shortcut) => (shortcut, d),
+                None => (&self.empty, d)
+            }
+        )
+    }
+
+    pub fn get_owned_shortcuts(&self) -> Vec<(Vec<KeyCode>, ShortcutInstruction)> {
+        ORDER.iter().map(|&d| match self.shortcuts.get_by_right(&d) {
+                Some(shortcut) => (shortcut.clone(), d),
+                None => (Vec::new(), d)
+            }
+        ).collect()
+    }
+
+    pub fn get_output(&self, shortcut: &Vec<KeyCode>) -> ShortcutInstruction {
+        if shortcut.is_empty() {
+            ShortcutInstruction::None
+        } else {
+            *self.shortcuts.get_by_left(shortcut).unwrap_or(&ShortcutInstruction::None)
+        }
     }
 
     pub fn get_shortcut(&self, output: &ShortcutInstruction) -> Option<&Vec<KeyCode>> {
         self.shortcuts.get_by_right(output)
-    }
-
-    fn sort_key(key: &mut [KeyCode]) {
-        key.sort_by(|&a, &b| (a as u16).cmp(&(b as u16)));
     }
 }
 
@@ -88,9 +136,10 @@ pub struct UserInputs {
     pub right_mouse_down: bool,
     pub left_let_go: bool,
     pub right_let_go: bool,
-    pub pressed_shortcut: ShortcutInstruction,
-    pub held_shortcut: ShortcutInstruction,
-    pub shortcuts: Shortcuts,
+    pub pressed_instruction: ShortcutInstruction,
+    pub held_instruction: ShortcutInstruction,
+    pub held_keyboard: Vec<KeyCode>,
+    pub prev_held_keyboard: Vec<KeyCode>,
     origin: StrongNode,
 }
 
@@ -115,14 +164,15 @@ impl UserInputs {
             right_mouse_down: false,
             left_let_go: false,
             right_let_go: false,
-            pressed_shortcut: ShortcutInstruction::None,
-            held_shortcut: ShortcutInstruction::None,
-            shortcuts: Shortcuts::default(),
+            pressed_instruction: ShortcutInstruction::None,
+            held_instruction: ShortcutInstruction::None,
+            held_keyboard: vec![],
+            prev_held_keyboard: vec![],
             origin: origin.node.clone(),
         }
     }
 
-    pub fn update(&mut self, store: &mut Store) {
+    pub fn update(&mut self, store: &mut Store, shortcuts: &Shortcuts) {
         self.prev_mouse = self.mouse;
         self.mouse = mouse_vec();
         self.left_mouse_pressed = is_mouse_button_pressed(MouseButton::Left);
@@ -135,13 +185,17 @@ impl UserInputs {
         self.prev_hover_focus = std::mem::take(&mut self.hover_focus);
         self.hover_focus = Handler::new(&self.origin).hit_detect(self.mouse, store);
 
-        let new = self.shortcuts.get_output(&mut get_keys_down().into_iter().collect());
-        if new != self.held_shortcut {
-            self.pressed_shortcut = new;
+        self.prev_held_keyboard = self.held_keyboard.clone();
+        self.held_keyboard.retain(|&k| is_key_down(k));
+        self.held_keyboard.append(&mut get_keys_pressed().into_iter().collect());
+
+        let new = shortcuts.get_output(&self.held_keyboard);
+        if new != self.held_instruction {
+            self.pressed_instruction = new;
         } else {
-            self.pressed_shortcut = ShortcutInstruction::None;
+            self.pressed_instruction = ShortcutInstruction::None;
         }
-        self.held_shortcut = new;
+        self.held_instruction = new;
 
         if self.left_mouse_pressed || !self.left_mouse_down {
             self.prev_hoverhold_focus = std::mem::take(&mut self.hoverhold_focus);
@@ -181,10 +235,10 @@ impl UserInputs {
     }
 
     pub fn instruction_pressed(&self, instruction: ShortcutInstruction) -> bool {
-        self.pressed_shortcut == instruction
+        self.pressed_instruction == instruction
     }
 
     pub fn instruction_active(&self, instruction: ShortcutInstruction) -> bool {
-        self.held_shortcut == instruction
+        self.held_instruction == instruction
     }
 }

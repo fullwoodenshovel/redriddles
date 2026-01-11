@@ -14,3 +14,4 @@ tuple_deref = { path = "tuple_deref" }
 [features]
 default = []
 debug = []
+hit_detect_debug = []

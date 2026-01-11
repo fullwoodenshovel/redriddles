@@ -25,13 +25,14 @@ impl Node for SaveGrid {
             for (x, col) in cols.iter_mut().enumerate() {
                 let x = 33.0 * x as f32 + 10.0;
                 let y = 33.0 * y as f32 + 60.0;
+                let rect = Rect::new(x, y, 28.0, 28.0);
 
                 if col_button(
-                    Rect::new(x, y, 28.0, 28.0),
-                    hovered,
+                    rect,
+                    hovered && rect.contains(ctx.user_inputs.mouse),
                     ctx.user_inputs.left_let_go,
-                    if lasttouch { Color { r: 0.65, g: 0.8, b: 0.65, a: 1.0 } } else { LIGHTGRAY },
-                    if lasttouch { Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 } } else { Color { r: 0.65, g: 0.65, b: 0.65, a: 1.0 } }
+                    if lasttouch { ENABLEDCOL } else { DISABLEDCOL },
+                    if lasttouch { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
                 ) {
                     if prevlasttouch {
                         if let Some(new) = ctx.store.get_mut::<Picker>().get_col_rgba() {

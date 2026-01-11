@@ -37,9 +37,9 @@ impl<const INDEX: u8> Node for Topbar<INDEX> {
         node.update_children(ctx);
     }
 
-    fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, _store: &mut Store) -> Vec<WeakNode> {
+    fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
         if self.bounding_box().contains(pos) {
-            vec![node.get_weak()]
+            node.hit_detect_children_and_self(pos, store)
         } else {
             vec![]
         }

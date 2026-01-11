@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use macroquad::{color::Color, math::{Vec3, Vec4}};
 
@@ -17,6 +17,16 @@ pub enum ColSelection {
     Rgba,
     Hsva,
     OkLab,
+}
+
+impl Display for ColSelection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Rgba => write!(f, "RGB"),
+            Self::Hsva => write!(f, "HSV"),
+            Self::OkLab => write!(f, "Ok Lab"),
+        }
+    }
 }
 
 impl Col {

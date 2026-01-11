@@ -6,7 +6,9 @@ use shortcuts::Shortcuts;
 pub struct Settings;
 
 impl New for Settings {
-    fn new(handler: &mut GenHandler) -> Self {
+    // 0 is shortcuts, 1 is topbar
+    // THINGS ARE DEPENDENT ON THIS. Change with care.
+    fn new(handler: &mut GenHandler) -> Self { 
         handler.push_child::<Shortcuts>();
 
         handler.push_data(Status::<1>(0));
@@ -14,9 +16,7 @@ impl New for Settings {
             156.0,
             "Settings",
             Box::new([
-                "Something",
-                "Completely",
-                "Different",
+                "Shortcuts"
             ])
         ));
 
@@ -31,6 +31,12 @@ impl Node for Settings {
     }
     
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
-        node.hit_detect_children_and_self(pos, store)
+        let children = node.get_children();
+        let mut result = children[1].hit_detect(pos, store);
+        if result.is_empty() {
+            result = node.get_children()[store.value::<Status<1>>() as usize].hit_detect(pos, store);
+        }
+        result.push(node.get_weak());
+        result
     }
 }
