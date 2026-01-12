@@ -334,9 +334,8 @@ impl ColType for Hsva {
         (self.h, self.s, self.v)
     }
 
-    fn gradient(&self, other: [f32; 4], start_index: u8, end_index: u8, len: u8) -> Vec<Self> where Self: Sized {
+    fn gradient(&self, _other: [f32; 4], _start_index: u8, _end_index: u8, _len: u8) -> Vec<Self> where Self: Sized {
         todo!();
-        vec![Self::default(); len as usize]
     }
 }
 
@@ -399,11 +398,11 @@ impl ColType for OkLab {
         )
     }
 
-    fn gradient(&self, other: [f32; 4], start_index: u8, end_index: u8, len: u8) -> Vec<Self> where Self: Sized {
+    fn gradient(&self, _other: [f32; 4], _start_index: u8, _end_index: u8, _len: u8) -> Vec<Self> where Self: Sized {
         todo!();
-        vec![Self {
-            oklab: Oklab { l: 0.0, a: 0.0, b: 0.0 },
-            a: 1.0
-        }; len as usize]
+        // vec![Self {
+        //     oklab: Oklab { l: 0.0, a: 0.0, b: 0.0 },
+        //     a: 1.0
+        // }; len as usize]
     }
 }

@@ -1,4 +1,4 @@
-use rfd::FileDialog;
+// use rfd::FileDialog;
 
 use super::*;
 
@@ -14,7 +14,7 @@ impl New for Sidebar {
 }
 
 impl Node for Sidebar {
-    fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
+    fn update(&mut self, _ctx: &mut AppContextHandler, _node: &NodeStore) {
         // macroquad::texture::load_image("/home/fullw/Downloads/e4ee9220524d977c9e9f25a064139512.png").await
     }
 
