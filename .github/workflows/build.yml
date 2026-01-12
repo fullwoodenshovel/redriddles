@@ -30,7 +30,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
-  # Linux build
+  # Linux build with ZIP
   build-linux:
     needs: prepare
     runs-on: ubuntu-latest
@@ -54,18 +54,57 @@ jobs:
       - name: Build for Linux
         run: cargo build --release
 
-      - name: Rename Linux binary
+      - name: Create Linux package
         run: |
-          mv target/release/redriddles \
-            "redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          
+          # Create folder structure
+          mkdir -p "redriddles-v${VERSION}-linux/redriddles"
+          mkdir -p "redriddles-v${VERSION}-linux/redriddles/saves"
+          mkdir -p "redriddles-v${VERSION}-linux/redriddles/config"
+          
+          # Copy executable
+          cp target/release/redriddles "redriddles-v${VERSION}-linux/redriddles/"
+          
+          # Create README (FIXED: use shell variable)
+          cat > "redriddles-v${VERSION}-linux/redriddles/README.txt" << EOF
+          Redriddles v${VERSION}
 
-      - name: Upload Linux binary
+          Just extract this folder anywhere and run the executable!
+          
+          Your save data will be stored in the 'saves' folder.
+          You can change settings in config.
+          
+          Folder structure:
+          - redriddles          # The executable
+          - saves/              # Your data
+          - config/             # Settings files
+          
+          To run:
+          1. Open terminal in this folder
+          2. Make executable: chmod +x redriddles
+          3. Run: ./redriddles
+          
+          Notes:
+          - You can move this folder anywhere
+          - Delete the folder to uninstall
+          EOF
+          
+          # Make executable
+          chmod +x "redriddles-v${VERSION}-linux/redriddles/redriddles"
+          
+          # Create ZIP
+          cd "redriddles-v${VERSION}-linux"
+          zip -r "../redriddles-v${VERSION}-linux-x86_64.zip" "redriddles"
+          cd ..
+
+      - name: Upload Linux package
         uses: actions/upload-artifact@v4
         with:
-          name: linux-binary
-          path: "redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64"
+          name: linux-package
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64.zip"
 
-  # Windows build
+  # Windows build with ZIP
   build-windows:
     needs: prepare
     runs-on: windows-latest
@@ -79,18 +118,53 @@ jobs:
       - name: Build for Windows
         run: cargo build --release
 
-      - name: Rename Windows binary
+      - name: Create Windows package
+        shell: bash
         run: |
-          Move-Item target/release/redriddles.exe `
-            "redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          
+          # Create folder structure
+          mkdir -p "redriddles-v${VERSION}-windows/redriddles"
+          mkdir -p "redriddles-v${VERSION}-windows/redriddles/saves"
+          mkdir -p "redriddles-v${VERSION}-windows/redriddles/config"
+          
+          # Copy executable
+          cp target/release/redriddles.exe "redriddles-v${VERSION}-windows/redriddles/"
+          
+          # Create README
+          cat > "redriddles-v${VERSION}-windows/redriddles/README.txt" << EOF
+          Redriddles v${VERSION}
 
-      - name: Upload Windows binary
+          Just extract this folder anywhere and run redriddles.exe!
+          
+          Your save data will be stored in the 'saves' folder.
+          You can change settings in config.
+          
+          Folder structure:
+          - redriddles.exe      # The executable
+          - saves/              # Your data
+          - config/             # Settings files
+          
+          To run:
+          Double-click redriddles.exe
+          
+          Notes:
+          - You can move this folder anywhere
+          - Delete the folder to uninstall
+          EOF
+          
+          # Create ZIP
+          cd "redriddles-v${VERSION}-windows"
+          zip -r "../redriddles-v${VERSION}-windows-x86_64.zip" "redriddles"
+          cd ..
+
+      - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: windows-binary
-          path: "redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe"
+          name: windows-package
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.zip"
 
-  # macOS Universal build (Intel + ARM)
+  # macOS Universal build with ZIP
   build-macos-universal:
     needs: prepare
     runs-on: macos-latest
@@ -111,19 +185,70 @@ jobs:
       - name: Build for macOS (ARM)
         run: cargo build --release --target aarch64-apple-darwin
 
-      # Combine both architectures into one universal binary
+      # Create universal binary
       - name: Create universal macOS binary
         run: |
           lipo -create \
             target/x86_64-apple-darwin/release/redriddles \
             target/aarch64-apple-darwin/release/redriddles \
-            -output "redriddles-v${{ needs.prepare.outputs.version }}-macos-universal"
+            -output "redriddles-universal"
+          
+          # Remove quarantine attribute
+          xattr -c "redriddles-universal"
 
-      - name: Upload macOS universal binary
+      - name: Create macOS package
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          
+          # Create folder structure
+          mkdir -p "redriddles-v${VERSION}-macos/redriddles"
+          mkdir -p "redriddles-v${VERSION}-macos/redriddles/saves"
+          mkdir -p "redriddles-v${VERSION}-macos/redriddles/config"
+          
+          # Copy executable
+          cp "redriddles-universal" "redriddles-v${VERSION}-macos/redriddles/redriddles"
+          
+          # Make executable
+          chmod +x "redriddles-v${VERSION}-macos/redriddles/redriddles"
+          
+          # Create README
+          cat > "redriddles-v${VERSION}-macos/redriddles/README.txt" << EOF
+          Redriddles v${VERSION}
+
+          Just extract this folder anywhere and run the executable!
+          
+          Your save data will be stored in the 'saves' folder.
+          You can change settings in config.
+          
+          Folder structure:
+          - redriddles          # The executable
+          - saves/              # Your data
+          - config/             # Settings files
+          
+          To run (first time):
+          1. Right-click the 'redriddles' file
+          2. Select "Open"
+          3. Click "Open" in the warning dialog
+          
+          Or from Terminal:
+          1. Open terminal in this folder
+          2. Run: ./redriddles
+          
+          Notes:
+          - You can move this folder anywhere
+          - Delete the folder to uninstall
+          EOF
+          
+          # Create ZIP
+          cd "redriddles-v${VERSION}-macos"
+          zip -r "../redriddles-v${VERSION}-macos.zip" "redriddles"
+          cd ..
+
+      - name: Upload macOS package
         uses: actions/upload-artifact@v4
         with:
-          name: macos-universal-binary
-          path: "redriddles-v${{ needs.prepare.outputs.version }}-macos-universal"
+          name: macos-package
+          path: "redriddles-v${{ needs.prepare.outputs.version }}-macos.zip"
 
   # Create the release with all binaries
   create-release:
@@ -135,10 +260,10 @@ jobs:
         with:
           fetch-depth: 0  # Get all history
 
-      - name: Download all binaries
+      - name: Download all packages
         uses: actions/download-artifact@v4
         with:
-          path: release-files
+          path: release-packages
 
       - name: Generate changelog from commits
         id: changelog
@@ -175,9 +300,10 @@ jobs:
 
       - name: Create release notes
         run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
           cat > RELEASE_NOTES.md << EOF
-          # Redriddles v${{ needs.prepare.outputs.version }}
-
+          # Redriddles v${VERSION}
+          
           ## What's new
           This is stuff important for the end user, basically the technical changes, but summarised and less important changes ignored.
           These are the new features:
@@ -186,41 +312,30 @@ jobs:
           
           ## Technical changes
           These are all of the new commits from this release (ignoring repeats).
-          This may include technical changes, architectural changes, bug fixes, ect:
+          This may include technical changes, architectural changes, bug fixes, etc:
           
           ${{ steps.changelog.outputs.changelog }}
           
           ## Downloads
           
           ### Windows
-          - **redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe** - For Windows 10/11 (64-bit)
+          - **redriddles-v${VERSION}-windows-x86_64.zip**
+            1. Extract the ZIP
+            2. Open the 'redriddles' folder
+            3. Double-click redriddles.exe
           
           ### Linux
-          - **redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64** - For Linux (64-bit)
-            - May require: \`sudo apt install libx11-6 libegl1\` or equivalent
+          - **redriddles-v${VERSION}-linux-x86_64.zip**
+            1. Extract the ZIP
+            2. Open the 'redriddles' folder in terminal
+            3. Run: \`./redriddles\`
           
           ### macOS
-          - **redriddles-v${{ needs.prepare.outputs.version }}-macos-universal** - Universal binary for ALL Macs (Intel & Apple Silicon)
-          
-          ## How to run
-          
-          ### Windows
-          1. Download the .exe file
-          2. Double-click to run
-          
-          ### Linux
-          1. Download the Linux binary
-          2. Make it executable: \`chmod +x redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64\`
-          3. Run: \`./redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64\`
-          
-          ### macOS
-          1. Download the universal binary
-          2. You may need to right-click and select "Open" the first time (Gatekeeper)
-          3. Or run from terminal: \`chmod +x redriddles-v${{ needs.prepare.outputs.version }}-macos-universal && ./redriddles-v${{ needs.prepare.outputs.version }}-macos-universal\`
-          
-          ## Notes
-          - The macOS binary works on both Intel Macs and Apple Silicon (M1/M2/M3) Macs
-          - No need to choose between different macOS versions
+          - **redriddles-v${VERSION}-macos.zip**
+            1. Extract the ZIP
+            2. Open the 'redriddles' folder
+            3. Right-click 'redriddles' and Open (first time only)
+            4. Or run in terminal: \`./redriddles\`
           EOF
           
           # Debug: show what was generated
@@ -234,6 +349,6 @@ jobs:
           name: Release v${{ needs.prepare.outputs.version }}
           body_path: RELEASE_NOTES.md
           files: |
-            release-files/linux-binary/redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64
-            release-files/windows-binary/redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.exe
-            release-files/macos-universal-binary/redriddles-v${{ needs.prepare.outputs.version }}-macos-universal
+            release-packages/linux-package/redriddles-v${{ needs.prepare.outputs.version }}-linux-x86_64.zip
+            release-packages/windows-package/redriddles-v${{ needs.prepare.outputs.version }}-windows-x86_64.zip
+            release-packages/macos-package/redriddles-v${{ needs.prepare.outputs.version }}-macos.zip
