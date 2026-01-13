@@ -11,7 +11,7 @@ impl New for Settings {
     fn new(handler: &mut GenHandler) -> Self { 
         handler.push_child::<Shortcuts>();
 
-        handler.push_data(Status::<1>(0));
+        status::push::<1>(handler);
         handler.push_child_io::<Topbar<1>>((
             156.0,
             "Settings",
@@ -34,7 +34,7 @@ impl Node for Settings {
         let children = node.get_children();
         let mut result = children[1].hit_detect(pos, store);
         if result.is_empty() {
-            result = node.get_children()[store.value::<Status<1>>() as usize].hit_detect(pos, store);
+            result = node.get_children()[status::get_or_default::<1>(store) as usize].hit_detect(pos, store);
         }
         result.push(node.get_weak());
         result

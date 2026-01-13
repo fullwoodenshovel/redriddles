@@ -30,10 +30,10 @@ impl<const INDEX: u8> Node for ChangeStatus<INDEX> {
             &self.name,
             ctx.user_inputs.hover_test(node),
             ctx.user_inputs.left_let_go,
-            if status == self.change_to { ENABLEDCOL } else { DISABLEDCOL },
-            if status == self.change_to { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
+            if status == Some(self.change_to) { ENABLEDCOL } else { DISABLEDCOL },
+            if status == Some(self.change_to) { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
         ) {
-            ctx.store.set::<Status<INDEX>>(self.change_to);
+            status::set::<INDEX>(ctx.store, self.change_to);
         }
     }
 

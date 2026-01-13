@@ -58,18 +58,45 @@ impl Store {
         *self.get_mut::<T>() = value;
     }
 
-    #[allow(private_bounds)]
     pub fn set<T: Any + DerefMut>(&mut self, value: T::Target)
     where <T as Deref>::Target: Sized
     {
         **self.get_mut::<T>() = value;
     }
 
-    #[allow(private_bounds)]
     pub fn value<T: Any + Deref>(&self) -> T::Target
     where T::Target: Copy
     {
         **self.get::<T>()
+    }
+
+    pub fn unwrap_or_set_default<T: Any + DerefMut>(&mut self) -> <T::Target as IsOption>::Inner
+    where T::Target: IsOption + Sized + Default + Copy, <T::Target as IsOption>::Inner: Default
+    {
+        let value = (**self.get::<T>()).into_opt();
+        match value {
+            Some(value) => value,
+            None => {
+                self.set::<T>(T::Target::default());
+                <T::Target as IsOption>::Inner::default()
+            },
+        }
+    }
+
+    pub fn exists<T: Any>(&self) -> bool {
+        self.store.contains_key(&TypeId::of::<T>())
+    }
+}
+
+pub trait IsOption {
+    type Inner;
+    fn into_opt(self) -> Option<Self::Inner>;
+}
+
+impl<T> IsOption for Option<T> {
+    type Inner = T;
+    fn into_opt(self) -> Option<Self::Inner> {
+        self
     }
 }
 

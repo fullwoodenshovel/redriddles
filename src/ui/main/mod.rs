@@ -5,7 +5,7 @@ mod topbar;
 mod draw;
 mod settings;
 mod export;
-use topbar::{Topbar, Status};
+use topbar::{Topbar, status};
 use draw::Draw;
 use settings::Settings;
 use export::Export;
@@ -39,7 +39,7 @@ impl New for Main {
         handler.push_child::<Settings>();
         handler.push_child::<Export>();
 
-        handler.push_data(Status::<0>(0));
+        status::push::<0>(handler);
         handler.push_child_io::<Topbar<0>>((
             156.0,
             "Pixel Editor",
@@ -57,18 +57,14 @@ impl New for Main {
 impl Node for Main {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         if let ShortcutInstruction::GoTo(tab) = ctx.user_inputs.pressed_instruction {
-            match tab {
-                Tab::Draw => ctx.store.set::<Status<0>>(0),
-                Tab::Settings => ctx.store.set::<Status<0>>(1),
-                Tab::Export => ctx.store.set::<Status<0>>(2),
-            }
+            status::set::<0>(ctx.store, tab as u8);
         }
 
         let children = node.get_children();
-        let status = ctx.store.value::<Status<0>>();
+        let status = status::get_or_default::<0>(ctx.store);
         children[status as usize].update(ctx);
         if status == 2 {
-            ctx.store.set::<Status<0>>(0);
+            status::set::<0>(ctx.store, 0);
         } // TEMPORARY. THIS DISABLES EXPORT TAB, IT ONLY GETS ENABLED FOR ONE FRAME
         children[3].update(ctx);
     }
@@ -77,7 +73,7 @@ impl Node for Main {
         let children = node.get_children();
         let mut result = children[3].hit_detect(pos, store);
         if result.is_empty() {
-            result = node.get_children()[store.value::<Status<0>>() as usize].hit_detect(pos, store);
+            result = node.get_children()[status::get_or_default::<0>(store) as usize].hit_detect(pos, store);
         }
         result.push(node.get_weak());
         result

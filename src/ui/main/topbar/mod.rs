@@ -8,7 +8,36 @@ pub struct Topbar<const INDEX: u8> {
 }
 
 #[tuple_deref]
-pub struct Status<const INDEX: u8>(pub u8);
+struct Status<const INDEX: u8>(pub Option<u8>);
+
+pub mod status {
+    use super::*;
+
+    // pub fn get<const INDEX: u8>(store: &mut Store) -> Option<u8> {
+    //     store.value::<Status<INDEX>>()
+    // }
+
+    pub fn get_or_default<const INDEX: u8>(store: &mut Store) -> u8 {
+        store.unwrap_or_set_default::<Status<INDEX>>()
+    }
+
+    pub fn set<const INDEX: u8>(store: &mut Store, value: u8) {
+        store.set::<Status<INDEX>>(Some(value));
+        if INDEX == 0 {
+            store.set::<Status<1>>(None);
+        }
+        // if INDEX <= 1 { // Copy this down when adding lower level statuses
+        //     store.set::<Status<1>>(None);
+        // }
+    }
+
+    pub fn push<const INDEX: u8>(handler: &mut GenHandler) {
+        if INDEX > 1 {
+            panic!("Status<{}> attempted to get pushed", INDEX)
+        }
+        handler.push_data(Status::<INDEX>(None));
+    }
+}
 
 impl<const INDEX: u8> NewNoOut for Topbar<INDEX> {
     type InType = (f32, &'static str, Box<[&'static str]>);
