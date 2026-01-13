@@ -1,7 +1,11 @@
 [package]
 name = "redriddles"
-version = "0.1.0"
+version = "1.0.2"
 edition = "2024"
+description = "A pixel art editor made for a friend."
+license = "GPL-3.0"
+repository = "https://github.com/fullwoodenshovel/redriddles"
+readme = "README.md"
 
 [dependencies]
 macroquad = "0.4"
@@ -15,3 +19,7 @@ tuple_deref = { path = "tuple_deref" }
 default = []
 debug = []
 hit_detect_debug = []
+
+[package.metadata.release]
+pre-release-commit-message = "chore: release v{{version}}"
+tag-message = "Release v{{version}}"

@@ -152,6 +152,12 @@ jobs:
           - You can move this folder anywhere
           - Delete the folder to uninstall
           EOF
+
+          # Install zip if not available
+          if ! command -v zip &> /dev/null; then
+            echo "Installing zip..."
+            choco install zip -y || apt-get install -y zip || brew install zip || true
+          fi
           
           # Create ZIP
           cd "redriddles-v${VERSION}-windows"
