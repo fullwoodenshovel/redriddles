@@ -63,9 +63,6 @@ impl Node for Main {
         let children = node.get_children();
         let status = status::get_or_default::<0>(ctx.store);
         children[status as usize].update(ctx);
-        if status == 2 {
-            status::set::<0>(ctx.store, 0);
-        } // TEMPORARY. THIS DISABLES EXPORT TAB, IT ONLY GETS ENABLED FOR ONE FRAME
         children[3].update(ctx);
     }
 

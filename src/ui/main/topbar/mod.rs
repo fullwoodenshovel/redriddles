@@ -37,6 +37,13 @@ pub mod status {
         }
         handler.push_data(Status::<INDEX>(None));
     }
+
+    pub fn push_nocheck<const INDEX: u8>(handler: &mut GenHandler) {
+        if INDEX > 1 {
+            panic!("Status<{}> attempted to get pushed", INDEX)
+        }
+        handler.push_data_nocheck(Status::<INDEX>(None));
+    }
 }
 
 impl<const INDEX: u8> NewNoOut for Topbar<INDEX> {

@@ -11,7 +11,7 @@ impl New for Settings {
     fn new(handler: &mut GenHandler) -> Self { 
         handler.push_child::<Shortcuts>();
 
-        status::push::<1>(handler);
+        status::push_nocheck::<1>(handler);
         handler.push_child_io::<Topbar<1>>((
             156.0,
             "Settings",
@@ -27,7 +27,11 @@ impl New for Settings {
 impl Node for Settings {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         clear_background(WHITE);
-        node.update_children(ctx);
+
+        let children = node.get_children();
+        let status = status::get_or_default::<1>(ctx.store);
+        children[status as usize].update(ctx);
+        children[1].update(ctx);
     }
     
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {

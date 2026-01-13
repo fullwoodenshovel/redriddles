@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 mod user_inputs;
@@ -71,14 +72,15 @@ impl Store {
     }
 
     pub fn unwrap_or_set_default<T: Any + DerefMut>(&mut self) -> <T::Target as IsOption>::Inner
-    where T::Target: IsOption + Sized + Default + Copy, <T::Target as IsOption>::Inner: Default
+    where T::Target: IsOption + Sized + Copy, <T::Target as IsOption>::Inner: Default + Copy + Debug
     {
         let value = (**self.get::<T>()).into_opt();
         match value {
             Some(value) => value,
             None => {
-                self.set::<T>(T::Target::default());
-                <T::Target as IsOption>::Inner::default()
+                let value = <T::Target as IsOption>::Inner::default();
+                self.set::<T>(<T::Target as IsOption>::from_value(value));
+                value
             },
         }
     }
@@ -91,12 +93,18 @@ impl Store {
 pub trait IsOption {
     type Inner;
     fn into_opt(self) -> Option<Self::Inner>;
+    fn from_value(value: Self::Inner) -> Self;
 }
 
 impl<T> IsOption for Option<T> {
     type Inner = T;
+
     fn into_opt(self) -> Option<Self::Inner> {
         self
+    }
+
+    fn from_value(value: Self::Inner) -> Self {
+        Some(value)
     }
 }
 
@@ -119,6 +127,14 @@ impl AppContextGenHandler {
         if self.store.store.insert(TypeId::of::<T>(), data).is_some() {
             panic!("Data of the same type given to AppContextGenHandler.")
         }
+    }
+
+    pub fn push_nocheck<T: Any>(&mut self, data: T) {
+        self.push_boxed_nocheck(Box::new(data));
+    }
+
+    pub fn push_boxed_nocheck<T: Any>(&mut self, data: Box<T>) {
+        self.store.store.insert(TypeId::of::<T>(), data);
     }
 
     fn into_context(self, user_inputs: UserInputs) -> AppContext {
@@ -372,6 +388,14 @@ impl GenHandler<'_> {
 
     pub fn push_data_boxed<T: Any>(&mut self, data: Box<T>) {
         self.ctx.push_boxed(data);
+    }
+
+    pub fn push_data_nocheck<T: Any>(&mut self, data: T) {
+        self.ctx.push_nocheck(data);
+    }
+
+    pub fn push_data_boxed_nocheck<T: Any>(&mut self, data: Box<T>) {
+        self.ctx.push_boxed_nocheck(data);
     }
 }
 

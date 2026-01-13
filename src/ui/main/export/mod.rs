@@ -1,8 +1,6 @@
 use rfd::FileDialog;
 
 use super::*;
-mod sidebar;
-use sidebar::Sidebar;
 
 fn pick_folder() -> Option<std::path::PathBuf> {
     FileDialog::new()
@@ -14,18 +12,33 @@ fn pick_folder() -> Option<std::path::PathBuf> {
 pub struct Export {
 }
 
-impl New for Export {
+impl New for Export { // 0 is topbar,
     fn new(handler: &mut GenHandler) -> Self {
-        handler.push_child::<Sidebar>();
+        status::push_nocheck::<1>(handler);
+
+        handler.push_child_io::<Topbar<1>>((
+            156.0,
+            "Export",
+            Box::new([
+                "Select folder",
+                "Export settings",
+                "Preview",
+            ])
+        ));
+
         Self {
         }
     }
 }
 
 impl Node for Export {
-    fn update(&mut self, _ctx: &mut AppContextHandler, _node: &NodeStore) {
-        println!("NOW");
-        println!("FOLDER: {:?}", pick_folder());
+    fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
+        clear_background(WHITE);
+
+        let children = node.get_children();
+        let status = status::get_or_default::<1>(ctx.store);
+        children[status as usize].update(ctx);
+        children[0].update(ctx);
     }
     
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
