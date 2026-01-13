@@ -40,7 +40,11 @@ impl Node for DrawSection {
 
         // ---------------- DRAW AREA ----------------
         if let ShortcutInstruction::ChangeDrawState(state) = ctx.user_inputs.pressed_instruction {
-            ctx.store.overwrite(state);
+            if *ctx.store.get::<DrawState>() == state {
+                ctx.store.overwrite(DrawState::Draw);
+            } else {
+                ctx.store.overwrite(state);
+            }
         } else if let ShortcutInstruction::Eraser = ctx.user_inputs.pressed_instruction {
             ctx.store.get_mut::<Picker>().set_col(None);
         }
