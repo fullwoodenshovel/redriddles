@@ -1,6 +1,6 @@
 [package]
 name = "redriddles"
-version = "1.0.5"
+version = "1.0.1"
 edition = "2024"
 description = "A pixel art editor made for a friend."
 license = "GPL-3.0"
