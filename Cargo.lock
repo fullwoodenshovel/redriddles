@@ -1132,6 +1132,7 @@ dependencies = [
  "macroquad",
  "oklab",
  "rfd",
+ "serde",
  "tuple_deref",
 ]
 

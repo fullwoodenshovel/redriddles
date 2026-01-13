@@ -6,6 +6,8 @@ use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 mod user_inputs;
 pub use user_inputs::{UserInputs, ShortcutInstruction, Shortcuts};
+mod save_file;
+pub use save_file::SaveData;
 
 use macroquad::prelude::*;
 
@@ -13,19 +15,21 @@ use macroquad::prelude::*;
 struct AppContext {
     user_inputs: UserInputs,
     store: Store,
-    shortcuts: Shortcuts
+    shortcuts: Shortcuts,
+    save_data: SaveData
 }
 
 impl AppContext {
     fn get_handler(&'_ mut self) -> AppContextHandler<'_> {
-        AppContextHandler { user_inputs: &self.user_inputs, store: &mut self.store, shortcuts: &mut self.shortcuts }
+        AppContextHandler { user_inputs: &self.user_inputs, store: &mut self.store, shortcuts: &mut self.shortcuts, save_data: &mut self.save_data }
     }
 }
 
 pub struct AppContextHandler<'a> {
     pub user_inputs: &'a UserInputs,
     pub store: &'a mut Store,
-    pub shortcuts: &'a mut Shortcuts
+    pub shortcuts: &'a mut Shortcuts,
+    pub save_data: &'a mut SaveData,
 }
 
 pub struct Store {
@@ -137,8 +141,8 @@ impl AppContextGenHandler {
         self.store.store.insert(TypeId::of::<T>(), data);
     }
 
-    fn into_context(self, user_inputs: UserInputs) -> AppContext {
-        AppContext { user_inputs, store: self.store, shortcuts: Shortcuts::default() }
+    fn into_context(self, user_inputs: UserInputs) -> Result<AppContext, &'static str> {
+        Ok(AppContext { user_inputs, store: self.store, shortcuts: Shortcuts::default(), save_data: SaveData::recover()? })
     }
 }
 
@@ -460,22 +464,22 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn new<T: Node + NewInOut<InType = (), OutType = ()> + 'static>() -> Self {
+    fn new<T: Node + NewInOut<InType = (), OutType = ()> + 'static>() -> Result<Self, &'static str> {
         let mut ctx = AppContextGenHandler::new();
         let origin = NodeStore::origin::<T>(&mut ctx);
         let user_inputs = UserInputs::new(&origin);
         let ctx = ctx.into_context(user_inputs);
-        Self {
-            origin,
-            ctx
-        }
+        Ok(Self {
+                    origin,
+                    ctx: ctx?
+                })
     }
-
-    pub async fn update(&mut self) {
+    
+    async fn update(&mut self) {
         self.ctx.user_inputs.update(&mut self.ctx.store, &self.ctx.shortcuts);
         #[cfg(feature = "hit_detect_debug")]
         if !(self.ctx.user_inputs.prev_hover_focus.len() == self.ctx.user_inputs.hover_focus.len() &&
-            self.ctx.user_inputs.prev_hover_focus.iter().enumerate().all(|(i, d)| d.ptr_eq(&self.ctx.user_inputs.hover_focus[i])))
+        self.ctx.user_inputs.prev_hover_focus.iter().enumerate().all(|(i, d)| d.ptr_eq(&self.ctx.user_inputs.hover_focus[i])))
         {
             println!("{}", self.ctx.user_inputs.hover_focus.iter().map(|d| d
                 .upgrade()
@@ -490,5 +494,39 @@ impl Frame {
         }
         self.origin.get_handler().update(&mut self.ctx.get_handler());
         next_frame().await;
+    }
+}
+
+pub struct ResultFrame {
+    frame: Result<Frame, &'static str>
+}
+
+impl ResultFrame {
+    pub fn new<T: Node + NewInOut<InType = (), OutType = ()> + 'static>() -> Self {
+        Self { frame: Frame::new::<T>() }
+    }
+
+    pub async fn update(&mut self) {
+        match &mut self.frame {
+            Ok(frame) => frame.update().await,
+            Err(reason) => {
+                loop {
+                    clear_background(WHITE);
+                    let mut y = 52.0;
+                    for line in reason.split("\n") {
+                        draw_text(
+                            line,
+                            26.0,
+                            y,
+                            20.0,
+                            BLACK,
+                        );
+                        y += 26.0;
+                    }
+                
+                    next_frame().await
+                }
+            }
+        }
     }
 }
