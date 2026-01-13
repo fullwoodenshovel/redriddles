@@ -203,7 +203,6 @@ git push origin "v$NEW_VERSION"
 echo ""
 echo "Successfully released v$NEW_VERSION!"
 echo "GitHub Actions is now building the release..."
-echo "Watch build: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1')/actions"
 
 # Clean up (optional - you might want to keep the file for reference)
 # rm -f RELEASE_NOTES.md
