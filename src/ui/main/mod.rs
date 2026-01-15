@@ -1,10 +1,11 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use super::*;
 mod topbar;
 mod draw;
 mod settings;
 mod export;
+use serde::{Deserialize, Serialize};
 use topbar::{Topbar, status};
 use draw::Draw;
 use settings::Settings;
@@ -14,7 +15,7 @@ pub use draw::DrawState;
 pub struct Main {
 }
 
-#[derive(Hash, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize)]
 pub enum Tab {
     Draw,
     Settings,
@@ -28,6 +29,19 @@ impl Display for Tab {
             Self::Settings => write!(f, "Settings"),
             Self::Export => write!(f, "Export"),
         }
+    }
+}
+
+impl FromStr for Tab {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let result = match s {
+            "Draw" => Self::Draw,
+            "Settings" => Self::Settings,
+            "Export" => Self::Export,
+            _ => return Err(())
+        };
+        Ok(result)
     }
 }
 

@@ -1,14 +1,19 @@
 use std::fmt::{Display, Error};
+use std::str::FromStr;
 
+use crate::node::expanded_keycode::ExKeyCode;
 use crate::ui::ColSelection;
 use crate::ui::main::{DrawState, Tab};
 use bimap::BiMap;
+use serde::de::Visitor;
+use serde::{Deserialize, Serialize};
+use serde_json::from_str;
 use crate::helpers::*;
 use macroquad::prelude::*;
 use super::*;
 
-#[derive(Hash, Eq, PartialEq, Clone, Copy)]
-pub enum ShortcutInstruction {
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+pub enum ShortcutInstruction { // If changing this, update Deserialize, ORDER, FromStr
     None,
     ChangeDrawState(DrawState),
     Eraser,
@@ -16,6 +21,38 @@ pub enum ShortcutInstruction {
     ToggleGrid,
     ChangePickerType(ColSelection),
     GoTo(Tab)
+}
+
+impl Serialize for ShortcutInstruction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: serde::Serializer {
+        serializer.serialize_str(&format!("{self}"))
+    }
+}
+
+impl<'de> Deserialize<'de> for ShortcutInstruction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: serde::Deserializer<'de> {
+        
+        struct ShortcutVisitor;
+        impl<'de> Visitor<'de> for ShortcutVisitor {
+            type Value = ShortcutInstruction;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(formatter, "a string representing a shortcut instruction")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where E: serde::de::Error, {
+                match FromStr::from_str(v) {
+                    Ok(result) => Ok(result),
+                    Err(_) => Err(E::custom(format!("Value `{v}` is invalid.")))
+                }
+            }
+        }
+
+        deserializer.deserialize_str(ShortcutVisitor)
+    }
 }
 
 const ORDER: [ShortcutInstruction; 13] = [
@@ -43,14 +80,69 @@ impl Display for ShortcutInstruction {
             Self::SaveCol => write!(f, "Save colour"),
             Self::ToggleGrid => write!(f, "Toggle grid"),
             Self::ChangePickerType(col_type) => write!(f, "Change picker colour space to {}", col_type),
-            Self::GoTo(tab) => write!(f, "Go to {}", tab),
+            Self::GoTo(tab) => write!(f, "Go to tab {}", tab),
         }
     }
 }
 
+impl FromStr for ShortcutInstruction {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let result = match s {
+            "None" => Self::None,
+            "Eraser" => Self::Eraser,
+            "Save colour" => Self::SaveCol,
+            "Toggle grid" => Self::ToggleGrid,
+            
+            s if s.starts_with("Change draw state to ") => Self::ChangeDrawState(DrawState::from_str(&s[21..])?),
+            s if s.starts_with("Change picker colour space to ") => Self::ChangePickerType(ColSelection::from_str(&s[30..])?),
+            s if s.starts_with("Go to tab ") => Self::GoTo(Tab::from_str(&s[10..])?),
+
+            _ => return Err(())
+        };
+        Ok(result)
+    }
+}
+
 pub struct Shortcuts {
-    shortcuts: BiMap<Vec<KeyCode>, ShortcutInstruction>,
-    empty: Vec<KeyCode>
+    pub(super) shortcuts: BiMap<Vec<KeyCode>, ShortcutInstruction>,
+    pub(super) empty: Vec<KeyCode>
+}
+
+pub fn shortcut_to_string(shortcut: &[KeyCode]) -> String {
+    shortcut.iter().map(|d| prettify_camel_case(format!("{d:?}"))).collect::<Vec<_>>().join(" + ")
+}
+
+pub fn prettify_camel_case(str: String) -> String {
+    let mut result = String::with_capacity(str.len() + str.matches(char::is_uppercase).count());
+    let mut chars = str.chars();
+
+    if let Some(char) = chars.next() {
+        result.push(char);
+    }
+
+    for char in chars {
+        if char.is_uppercase() {
+            result.push(' ');
+        }
+        result.push(char);
+    }
+
+    result
+}
+
+pub fn string_to_shortcut(shortcut: &str) -> Result<Vec<KeyCode>, String> {
+    let mut result = Vec::new();
+    for string in shortcut.split('+').map(|s| s.trim()) {
+        let string = string.replace(' ', "");
+        match from_str::<ExKeyCode>(&format!("\"{string}\"")) {
+            Ok(item) => result.push(item.into()),
+            Err(_) => return Err(format!("`{string}` is not a valid key.\n\
+                If you want to see how to specify a specific key,\n\
+                create a keyboard shortcut with it and see what pops up."))
+        }
+    }
+    Ok(result)
 }
 
 impl Default for Shortcuts {

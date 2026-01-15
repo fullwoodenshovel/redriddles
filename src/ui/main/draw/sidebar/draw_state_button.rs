@@ -1,8 +1,10 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
+
+use serde::{Deserialize, Serialize};
 
 use super::*;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum DrawState {
     Line,
     Fill,
@@ -18,6 +20,20 @@ impl Display for DrawState {
             Self::Picker => write!(f, "Picker"),
             Self::Draw => write!(f, "Draw"),
         }
+    }
+}
+
+impl FromStr for DrawState {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let result = match s {
+            "Line" => Self::Line,
+            "Fill" => Self::Fill,
+            "Picker" => Self::Picker,
+            "Draw" => Self::Draw,
+            _ => return Err(())
+        };
+        Ok(result)
     }
 }
 

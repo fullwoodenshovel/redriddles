@@ -14,6 +14,7 @@ oklab = "1.1"
 rfd = "=0.16.0"
 bimap = "0.6"
 serde = "1.0"
+serde_json = "1.0"
 tuple_deref = { path = "tuple_deref" }
 
 [features]

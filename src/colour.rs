@@ -1,8 +1,9 @@
-use std::fmt::{Debug, Display};
+use std::{fmt::{Debug, Display}, str::FromStr};
 
 use macroquad::{color::Color, math::{Vec3, Vec4}};
 
 use oklab::{Oklab, Rgb, oklab_to_srgb_f32, srgb_f32_to_oklab};
+use serde::{Deserialize, Serialize};
 
 use crate::helpers::arr_to_macroquad;
 
@@ -12,7 +13,7 @@ pub enum Col {
     OkLab(OkLab),
 }
 
-#[derive(PartialEq, Hash, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone, Copy, Deserialize, Serialize)]
 pub enum ColSelection {
     Rgba,
     Hsva,
@@ -26,6 +27,19 @@ impl Display for ColSelection {
             Self::Hsva => write!(f, "HSV"),
             Self::OkLab => write!(f, "Ok Lab"),
         }
+    }
+}
+
+impl FromStr for ColSelection {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let result = match s {
+            "RGB" => Self::Rgba,
+            "HSV" => Self::Hsva,
+            "Ok Lab" => Self::OkLab,
+            _ => return Err(())
+        };
+        Ok(result)
     }
 }
 

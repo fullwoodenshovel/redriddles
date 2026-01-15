@@ -5,9 +5,10 @@ use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 mod user_inputs;
-pub use user_inputs::{UserInputs, ShortcutInstruction, Shortcuts};
+pub use user_inputs::{UserInputs, ShortcutInstruction, Shortcuts, shortcut_to_string, prettify_camel_case};
 mod save_file;
 pub use save_file::SaveData;
+mod expanded_keycode;
 
 use macroquad::prelude::*;
 
@@ -15,20 +16,18 @@ use macroquad::prelude::*;
 struct AppContext {
     user_inputs: UserInputs,
     store: Store,
-    shortcuts: Shortcuts,
     save_data: SaveData
 }
 
 impl AppContext {
     fn get_handler(&'_ mut self) -> AppContextHandler<'_> {
-        AppContextHandler { user_inputs: &self.user_inputs, store: &mut self.store, shortcuts: &mut self.shortcuts, save_data: &mut self.save_data }
+        AppContextHandler { user_inputs: &self.user_inputs, store: &mut self.store, save_data: &mut self.save_data }
     }
 }
 
 pub struct AppContextHandler<'a> {
     pub user_inputs: &'a UserInputs,
     pub store: &'a mut Store,
-    pub shortcuts: &'a mut Shortcuts,
     pub save_data: &'a mut SaveData,
 }
 
@@ -141,8 +140,8 @@ impl AppContextGenHandler {
         self.store.store.insert(TypeId::of::<T>(), data);
     }
 
-    fn into_context(self, user_inputs: UserInputs) -> Result<AppContext, &'static str> {
-        Ok(AppContext { user_inputs, store: self.store, shortcuts: Shortcuts::default(), save_data: SaveData::recover()? })
+    fn into_context(self, user_inputs: UserInputs) -> Result<AppContext, String> {
+        Ok(AppContext { user_inputs, store: self.store, save_data: SaveData::recover()? })
     }
 }
 
@@ -464,7 +463,7 @@ pub struct Frame {
 }
 
 impl Frame {
-    fn new<T: Node + NewInOut<InType = (), OutType = ()> + 'static>() -> Result<Self, &'static str> {
+    fn new<T: Node + NewInOut<InType = (), OutType = ()> + 'static>() -> Result<Self, String> {
         let mut ctx = AppContextGenHandler::new();
         let origin = NodeStore::origin::<T>(&mut ctx);
         let user_inputs = UserInputs::new(&origin);
@@ -476,7 +475,7 @@ impl Frame {
     }
     
     async fn update(&mut self) {
-        self.ctx.user_inputs.update(&mut self.ctx.store, &self.ctx.shortcuts);
+        self.ctx.user_inputs.update(&mut self.ctx.store, &self.ctx.save_data.shortcuts);
         #[cfg(feature = "hit_detect_debug")]
         if !(self.ctx.user_inputs.prev_hover_focus.len() == self.ctx.user_inputs.hover_focus.len() &&
         self.ctx.user_inputs.prev_hover_focus.iter().enumerate().all(|(i, d)| d.ptr_eq(&self.ctx.user_inputs.hover_focus[i])))
@@ -498,7 +497,7 @@ impl Frame {
 }
 
 pub struct ResultFrame {
-    frame: Result<Frame, &'static str>
+    frame: Result<Frame, String>
 }
 
 impl ResultFrame {
