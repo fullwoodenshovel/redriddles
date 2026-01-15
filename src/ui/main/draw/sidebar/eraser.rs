@@ -15,16 +15,15 @@ impl New for Eraser {
 
 impl Node for Eraser {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
-        let hovered = ctx.user_inputs.hover_test(node);
         let active = ctx.store.get_mut::<Picker>().get_col_rgba().is_none();
             
-        if helpers::ui_button(
+        if ui_button(
             self.rect,
             "Eraser",
-            hovered,
-            ctx.user_inputs.left_let_go,
             if active { ENABLEDCOL } else { DISABLEDCOL },
-            if active { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
+            if active { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL },
+            node,
+            ctx
         ) {
             ctx.store.get_mut::<Picker>().set_col(None);
         }

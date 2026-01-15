@@ -12,5 +12,6 @@ use super::helpers;
 pub use super::transform::*;
 pub use super::colour::*;
 pub use super::node::*;
+pub use super::helpers::*;
 pub mod main;
 use tuple_deref::tuple_deref;

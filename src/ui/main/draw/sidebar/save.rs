@@ -31,13 +31,13 @@ impl Node for Save {
 
         if let Some(col) = ctx.store.get_mut::<Picker>().get_col_rgba() {
             
-            helpers::ui_button(
+            raw_ui_button(
                 self.rect,
                 "Save colour",
                 hovered,
-                ctx.user_inputs.left_let_go,
+                false,
                 if lasttouch { ENABLEDCOL } else { DISABLEDCOL },
-                if lasttouch { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
+                if lasttouch { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL },
             );
 
             draw_rectangle(115.0, 380.0, 28.0, 28.0, DISABLEDCOL);

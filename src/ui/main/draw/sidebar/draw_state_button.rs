@@ -60,11 +60,11 @@ impl Node for DrawStateButton {
         let lasttouch = ctx.user_inputs.last_touch_test(node);
         let active = *ctx.store.get::<DrawState>() == self.new_state;
 
-        helpers::ui_button(
+        raw_ui_button(
             self.rect,
             self.name,
             hovered,
-            ctx.user_inputs.left_let_go,
+            false,
             if active { ENABLEDCOL } else { DISABLEDCOL },
             if active { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
         );

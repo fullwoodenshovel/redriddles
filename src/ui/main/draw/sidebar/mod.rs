@@ -15,7 +15,6 @@ pub use draw_state_button::DrawState;
 
 
 use colour_picker::{PickerNode, Picker, ColPicker};
-use helpers::*;
 
 pub struct Sidebar {
     start_pos: Vec2,

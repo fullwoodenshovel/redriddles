@@ -1,5 +1,3 @@
-use crate::helpers::ui_button;
-
 use super::*;
 
 #[derive(PartialEq, Eq)]
@@ -25,7 +23,7 @@ impl Node for Shortcuts {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         let hover_possible = ctx.user_inputs.hoverhold_test(node);
         for (index, (shortcut, instruction)) in ctx.save_data.shortcuts.get_owned_shortcuts().into_iter().enumerate() {
-            ui_button(Rect::new(26.0, 32.0 * index as f32 + 106.0, 300.0, 26.0), &format!("{instruction}"), false, false, DISABLEDCOL, BLANK);
+            disabled_ui_button(Rect::new(26.0, 32.0 * index as f32 + 106.0, 300.0, 26.0), &format!("{instruction}"), DISABLEDCOL);
             
             let remove_rect = Rect::new(352.0, 32.0 * index as f32 + 106.0, 80.0, 26.0);
             let shortcut_rect = Rect::new(438.0, 32.0 * index as f32 + 106.0, 300.0, 26.0);
@@ -33,18 +31,18 @@ impl Node for Shortcuts {
             if shortcut_rect.contains(ctx.user_inputs.lasttouch_mouse) && self.active != OverwriteState::Disabled(index) {
                 name = shortcut_to_string(&ctx.user_inputs.prev_held_keyboard);
                 self.active = OverwriteState::Active(index);
-                ui_button(remove_rect, "Remove", false, false, DISABLEDCOL, BLANK);
+                disabled_ui_button(remove_rect, "Remove", DISABLEDCOL);
             } else if shortcut.is_empty() {
-                ui_button(remove_rect, "Removed", false, false, ENABLEDCOL, BLANK);
+                disabled_ui_button(remove_rect, "Removed", ENABLEDCOL);
                 name = "Click to add.".to_string();
-            } else if ui_button(remove_rect, "Remove", hover_possible && remove_rect.contains(ctx.user_inputs.mouse), ctx.user_inputs.left_let_go, DISABLEDCOL, DISABLEDHOVERCOL) {
+            } else if ui_button(remove_rect, "Remove", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx) {
                 ctx.save_data.shortcuts.discard(instruction);
                 name = "Click to add.".to_string();
             } else {
                 name = shortcut_to_string(&shortcut);
             }
 
-            ui_button(
+            raw_ui_button(
                 shortcut_rect,
                 &name,
                 hover_possible && shortcut_rect.contains(ctx.user_inputs.mouse),

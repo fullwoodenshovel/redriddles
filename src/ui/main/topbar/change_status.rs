@@ -25,13 +25,13 @@ impl<const INDEX: u8> NewInOut for ChangeStatus<INDEX> {
 impl<const INDEX: u8> Node for ChangeStatus<INDEX> {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         let status = ctx.store.value::<Status<INDEX>>();
-        if helpers::ui_button(
+        if ui_button(
             self.rect,
             &self.name,
-            ctx.user_inputs.hover_test(node),
-            ctx.user_inputs.left_let_go,
             if status == Some(self.change_to) { ENABLEDCOL } else { DISABLEDCOL },
-            if status == Some(self.change_to) { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL }
+            if status == Some(self.change_to) { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL },
+            node,
+            ctx
         ) {
             status::set::<INDEX>(ctx.store, self.change_to);
         }
