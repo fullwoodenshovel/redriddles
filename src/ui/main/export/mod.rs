@@ -4,6 +4,7 @@ use super::*;
 mod export_settings;
 mod preview;
 mod select_folder;
+use select_folder::SelectFolder;
 
 fn pick_folder() -> Option<std::path::PathBuf> {
     FileDialog::new()
@@ -15,9 +16,11 @@ fn pick_folder() -> Option<std::path::PathBuf> {
 pub struct Export {
 }
 
-impl New for Export { // 0 is topbar,
+impl New for Export { // 0 is select folder, 1 is topbar,
     fn new(handler: &mut GenHandler) -> Self {
         status::push_nocheck::<1>(handler);
+        
+        handler.push_child::<SelectFolder>();
 
         handler.push_child_io::<Topbar<1>>((
             156.0,
@@ -41,10 +44,16 @@ impl Node for Export {
         let children = node.get_children();
         let status = status::get_or_default::<1>(ctx.store);
         children[status as usize].update(ctx);
-        children[0].update(ctx);
+        children[1].update(ctx);
     }
     
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
-        node.hit_detect_children_and_self(pos, store)
+        let children = node.get_children();
+        let mut result = children[1].hit_detect(pos, store);
+        if result.is_empty() {
+            result = node.get_children()[status::get_or_default::<1>(store) as usize].hit_detect(pos, store);
+        }
+        result.push(node.get_weak());
+        result
     }
 }

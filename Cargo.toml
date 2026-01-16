@@ -16,6 +16,7 @@ bimap = "0.6"
 serde = "1.0"
 serde_json = "1.0"
 tuple_deref = { path = "tuple_deref" }
+opener = "0.8"
 
 [features]
 default = []

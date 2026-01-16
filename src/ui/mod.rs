@@ -8,7 +8,6 @@ pub const ENABLEDHOVERCOL: Color = Color { r: 0.60, g: 0.75, b: 0.60, a: 1.0 };
 
 use super::colour_picker;
 use super::colour;
-use super::helpers;
 pub use super::transform::*;
 pub use super::colour::*;
 pub use super::node::*;

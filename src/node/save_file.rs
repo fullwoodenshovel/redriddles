@@ -4,18 +4,18 @@ use super::*;
 use bimap::Overwritten;
 use serde::{Serialize, Deserialize};
 use serde_json::{from_str, to_string_pretty};
-use std::{collections::BTreeMap, env, fs, path::PathBuf};
+use std::{collections::{BTreeMap, VecDeque}, env, fs, path::PathBuf};
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveDataStore { // IF CHANGING THIS BETWEEN VERSIONS, ADD SUPPORT FOR IT
     shortcuts: BTreeMap<String, ShortcutInstruction>,
-    cached_dirs: Vec<String>
+    cached_dirs: VecDeque<PathBuf>
 }
 
 #[derive(Default)]
 pub struct SaveData {
     pub shortcuts: Shortcuts,
-    pub cached_dirs: Vec<String>
+    pub cached_dirs: VecDeque<PathBuf>
 }
 
 const SYNTAX_ERROR: &str = "ERROR WITH SAVE FILE!\n\
