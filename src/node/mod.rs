@@ -191,9 +191,8 @@ pub type StrongNode = Rc<NodeStore>;
 ///
 /// }
 ///
-/// impl NewNoOut for Example {
-///     type InType = ();
-///     fn new(_: Self::InType, _handler: &mut GenHandler) -> Self {
+/// impl New for Example {
+///     fn new(_handler: &mut GenHandler) -> Self {
 ///         Self {
 ///
 ///         }
@@ -206,11 +205,7 @@ pub type StrongNode = Rc<NodeStore>;
 ///     }
 ///
 ///     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
-///         if self.rect.contains(pos) {
-///             vec![node.get_weak()]
-///         } else {
-///             vec![]
-///         }
+///         node.hit_detect_children_and_self(pos, store)
 ///     }
 /// }
 /// ```
