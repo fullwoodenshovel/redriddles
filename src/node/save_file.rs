@@ -127,7 +127,7 @@ impl SaveDataStore {
                     shortcut_to_string(&old_shortcut), old_instruction)
                 ),
                 Overwritten::Both((old_shortcut1, old_instruction1), (old_shortcut2, old_instruction2)) => // todo!() TODO TEST THIS
-                    Some(format!("Two definitions of the same shortcut `{}` and the same instruction `{}`.\n\
+                    Some(format!("Three definitions of the same shortcut `{}` and the same instruction `{}`.\n\
                     The following three definitions exist:\n\
                     `{}` -> `{}`\n\
                     `{}` -> `{}`\n\
