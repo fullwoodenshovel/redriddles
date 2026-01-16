@@ -15,6 +15,13 @@ pub fn ui_button(rect: Rect, label: &str, default_col: Color, hover_col: Color, 
     raw_ui_button(rect, label, hovered, let_go, default_col, hover_col)
 }
 
+pub fn sub_ui_button(rect: Rect, label: &str, default_col: Color, hover_col: Color, node: &NodeStore, ctx: &AppContextHandler) -> bool {
+    let hovered = ctx.user_inputs.hover_test(node) && rect.contains(ctx.user_inputs.mouse);
+    let let_go = hovered && ctx.user_inputs.left_let_go && ctx.user_inputs.last_touch_test(node);
+
+    raw_ui_button(rect, label, hovered, let_go, default_col, hover_col)
+}
+
 pub fn disabled_ui_button(rect: Rect, label: &str, col: Color) {
     draw_rectangle(
         rect.x,
