@@ -232,6 +232,7 @@ pub struct UserInputs {
     pub held_instruction: ShortcutInstruction,
     pub held_keyboard: Vec<KeyCode>,
     pub prev_held_keyboard: Vec<KeyCode>,
+    shortcuts_enabled: RefCell<bool>,
     origin: StrongNode,
 }
 
@@ -260,6 +261,7 @@ impl UserInputs {
             held_instruction: ShortcutInstruction::None,
             held_keyboard: vec![],
             prev_held_keyboard: vec![],
+            shortcuts_enabled: RefCell::new(true),
             origin: origin.node.clone(),
         }
     }
@@ -281,13 +283,19 @@ impl UserInputs {
         self.held_keyboard.retain(|&k| is_key_down(k));
         self.held_keyboard.append(&mut get_keys_pressed().into_iter().collect());
 
-        let new = shortcuts.get_output(&self.held_keyboard);
-        if new != self.held_instruction {
-            self.pressed_instruction = new;
+        if *self.shortcuts_enabled.borrow() {
+            let new = shortcuts.get_output(&self.held_keyboard);
+            if new != self.held_instruction {
+                self.pressed_instruction = new;
+            } else {
+                self.pressed_instruction = ShortcutInstruction::None;
+            }
+            self.held_instruction = new;
         } else {
             self.pressed_instruction = ShortcutInstruction::None;
+            self.held_instruction = ShortcutInstruction::None;
+            *self.shortcuts_enabled.borrow_mut() = true;
         }
-        self.held_instruction = new;
 
         if self.left_mouse_pressed || !self.left_mouse_down {
             self.prev_hoverhold_focus = std::mem::take(&mut self.hoverhold_focus);
@@ -332,5 +340,9 @@ impl UserInputs {
 
     pub fn instruction_active(&self, instruction: ShortcutInstruction) -> bool {
         self.held_instruction == instruction
+    }
+
+    pub fn disable_shortcuts(&self) {
+        *self.shortcuts_enabled.borrow_mut() = false;
     }
 }
