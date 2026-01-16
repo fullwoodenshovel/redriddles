@@ -91,7 +91,7 @@ impl FromStr for ShortcutInstruction {
         let result = match s {
             "None" => Self::None,
             "Eraser" => Self::Eraser,
-            "Save colour" => Self::SaveCol,
+            "Save colour" | "Save color" | "Save col" => Self::SaveCol,
             "Toggle grid" => Self::ToggleGrid,
             
             s if s.starts_with("Change draw state to ") => Self::ChangeDrawState(DrawState::from_str(&s[21..])?),
