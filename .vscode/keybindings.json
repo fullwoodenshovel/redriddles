@@ -4,15 +4,5 @@
     "command": "workbench.action.tasks.runTask",
     "args": "Release: Interactive",
     "when": "editorTextFocus"
-  },
-  {
-    "key": "ctrl+alt+a",
-    "command": "workbench.action.tasks.runTask",
-    "args": "Release: Patch"
-  },
-  {
-    "key": "ctrl+alt+s",
-    "command": "workbench.action.tasks.runTask",
-    "args": "Release: Current"
   }
 ]
