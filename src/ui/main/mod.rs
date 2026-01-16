@@ -45,9 +45,8 @@ impl FromStr for Tab {
     }
 }
 
-impl New for Main {
-    // 0 is draw, 1 is settings, 2 is export, 3 is topbar
-    // THINGS ARE DEPENDENT ON THIS. Change with care.
+const TOPBAR: usize = 3;
+impl New for Main { // 0 is draw, 1 is settings, 2 is export, 3 is topbar
     fn new(handler: &mut GenHandler) -> Self {
         handler.push_child::<Draw>();
         handler.push_child::<Settings>();
@@ -77,12 +76,12 @@ impl Node for Main {
         let children = node.get_children();
         let status = status::get_or_default::<0>(ctx.store);
         children[status as usize].update(ctx);
-        children[3].update(ctx);
+        children[TOPBAR].update(ctx);
     }
 
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
         let children = node.get_children();
-        let mut result = children[3].hit_detect(pos, store);
+        let mut result = children[TOPBAR].hit_detect(pos, store);
         if result.is_empty() {
             result = node.get_children()[status::get_or_default::<0>(store) as usize].hit_detect(pos, store);
         }

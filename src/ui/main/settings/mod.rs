@@ -5,9 +5,8 @@ use shortcuts::Shortcuts;
 
 pub struct Settings;
 
-impl New for Settings {
-    // 0 is shortcuts, 1 is topbar
-    // THINGS ARE DEPENDENT ON THIS. Change with care.
+const TOPBAR: usize = 1;
+impl New for Settings { // 0 is shortcuts, 1 is topbar
     fn new(handler: &mut GenHandler) -> Self { 
         handler.push_child::<Shortcuts>();
 
@@ -31,12 +30,12 @@ impl Node for Settings {
         let children = node.get_children();
         let status = status::get_or_default::<1>(ctx.store);
         children[status as usize].update(ctx);
-        children[1].update(ctx);
+        children[TOPBAR].update(ctx);
     }
     
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {
         let children = node.get_children();
-        let mut result = children[1].hit_detect(pos, store);
+        let mut result = children[TOPBAR].hit_detect(pos, store);
         if result.is_empty() {
             result = node.get_children()[status::get_or_default::<1>(store) as usize].hit_detect(pos, store);
         }
