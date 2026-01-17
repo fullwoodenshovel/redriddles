@@ -17,6 +17,7 @@ serde = "1.0"
 serde_json = "1.0"
 tuple_deref = { path = "tuple_deref" }
 opener = "0.8"
+tokio = {version = "1.49", features = ["full"] }
 
 [features]
 default = []

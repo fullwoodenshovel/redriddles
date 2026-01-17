@@ -4,7 +4,7 @@ use super::*;
 mod select_folder;
 use select_folder::SelectFolder;
 mod export_settings;
-use export_settings::ExportSettings;
+use export_settings::{ExportSettings, ExportSettingsNode};
 mod preview;
 use preview::Preview;
 
@@ -24,7 +24,7 @@ impl New for Export { // 0 is select folder, 1 is export settings, 2 is preview,
         status::push_nocheck::<1>(handler);
         
         handler.push_child::<SelectFolder>();
-        handler.push_child::<ExportSettings>();
+        handler.push_child::<ExportSettingsNode>();
         handler.push_child::<Preview>();
 
         handler.push_child_io::<Topbar<1>>((
