@@ -25,7 +25,7 @@ impl Node for HexInput {
             if self.active {ENABLEDCOL} else {DISABLEDCOL},
             if self.active {ENABLEDCOL} else {DISABLEDHOVERCOL},
             node,
-            ctx
+            ctx.user_inputs
         ) {
             self.active = true;
             ctx.store.get_mut::<Picker>().set_col(None);

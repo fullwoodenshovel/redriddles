@@ -23,7 +23,7 @@ impl Node for Eraser {
             if active { ENABLEDCOL } else { DISABLEDCOL },
             if active { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL },
             node,
-            ctx
+            ctx.user_inputs
         ) {
             ctx.store.get_mut::<Picker>().set_col(None);
         }

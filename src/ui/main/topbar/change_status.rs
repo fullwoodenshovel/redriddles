@@ -31,7 +31,7 @@ impl<const INDEX: u8> Node for ChangeStatus<INDEX> {
             if status == Some(self.change_to) { ENABLEDCOL } else { DISABLEDCOL },
             if status == Some(self.change_to) { ENABLEDHOVERCOL } else { DISABLEDHOVERCOL },
             node,
-            ctx
+            ctx.user_inputs
         ) {
             status::set::<INDEX>(ctx.store, self.change_to);
         }

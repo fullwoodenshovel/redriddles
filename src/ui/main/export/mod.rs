@@ -8,10 +8,16 @@ use export_settings::{ExportSettings, ExportSettingsNode};
 mod preview;
 use preview::Preview;
 
-fn pick_folder() -> Option<std::path::PathBuf> {
+fn pick_folder(title: &str) -> Option<std::path::PathBuf> {
     FileDialog::new()
-        .set_title("Select a folder")
+        .set_title(title)
         .pick_folder()
+}
+
+fn save_file(title: &str) -> Option<std::path::PathBuf> {
+    FileDialog::new()
+        .set_title(title)
+        .save_file()
 }
 
 #[derive(Default)]

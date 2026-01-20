@@ -35,7 +35,7 @@ impl Node for Shortcuts {
             } else if shortcut.is_empty() {
                 disabled_ui_button(remove_rect, "Removed", ENABLEDCOL);
                 name = "Click to add.".to_string();
-            } else if sub_ui_button(remove_rect, "Remove", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx) {
+            } else if sub_ui_button(remove_rect, "Remove", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs) {
                 ctx.save_data.shortcuts.discard(instruction);
                 name = "Click to add.".to_string();
             } else {
