@@ -4,10 +4,10 @@ use super::*;
 mod select_folder;
 use select_folder::SelectFolder;
 mod export_settings;
-use export_settings::{ExportSettings, ExportSettingsNode};
+use export_settings::{ExportSettings, ExportSettingsNode, PlaceSettings, ProcessSettings};
 mod preview;
 use preview::Preview;
-
+// todo!() Add importing from a file to automatically make the pixels
 fn pick_folder(title: &str) -> Option<std::path::PathBuf> {
     FileDialog::new()
         .set_title(title)

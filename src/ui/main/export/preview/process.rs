@@ -2,6 +2,7 @@ use rayon::prelude::*;
 use super::*;
 
 use super::Texture;
+use std::f32;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{path::PathBuf, thread};
@@ -98,7 +99,7 @@ impl AsyncTextureLoader {
         let cancel_clone = cancel.clone();
 
         thread::spawn(move || {
-            load_images_parallel(paths, tx, cancel_clone, process_settings.col_sel);
+            load_images_parallel(paths, tx, cancel_clone, process_settings.col_sel, Some(process_settings.pixel_size));
         });
 
         Self {
@@ -115,8 +116,8 @@ impl AsyncTextureLoader {
         self.cancel.cancel();
     }
 
-    pub fn get_status(&mut self, pixels: &PixelArray) -> &mut LoaderStatus {
-        if !matches!(self.status, LoaderStatus::Error(_) | LoaderStatus::Done(_)) {
+    pub fn get_status(&mut self, ctx: &mut AppContextHandler) -> &mut LoaderStatus {
+        if !matches!(self.status, LoaderStatus::Error(_) | LoaderStatus::Done(_) | LoaderStatus::Cancelled) {
             while let Ok(result) = self.rx.try_recv() {
                 match result {
                     LoaderMsg::Progress { loaded, total, current } => {
@@ -124,8 +125,18 @@ impl AsyncTextureLoader {
                         self.status = LoaderStatus::Loading { frac: self.loaded as f32 / total as f32, current };
                     },
                     LoaderMsg::Image(texture) => self.textures.push(Texture::from_raw(texture)),
-                    LoaderMsg::Done => { self.status = LoaderStatus::Done(generate_image(std::mem::take(&mut self.textures), pixels.clone())); break },
-                    LoaderMsg::Error(err) => { self.status = LoaderStatus::Error(err); break },
+                    LoaderMsg::Done => {
+                        if self.textures.is_empty() {
+                            self.status = LoaderStatus::Error("Couldn't find any valid image files in that folder.".to_string());
+                        } else {
+                            self.status = LoaderStatus::Done(generate_image(std::mem::take(&mut self.textures), ctx));
+                            break;
+                        }
+                    },
+                    LoaderMsg::Error(err) => {
+                        self.status = LoaderStatus::Error(err);
+                        break;
+                    },
                 }
             }
         }
@@ -133,9 +144,51 @@ impl AsyncTextureLoader {
     }
 }
 
-fn generate_image(textures: Vec<Texture>, pixels: PixelArray) -> Texture2D {
-    // todo!()
-    Texture2D::empty()
+fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Texture2D {
+    let settings = ctx.store.get::<ExportSettings>();
+    let pixel_size = settings.process.pixel_size as f32;
+    let pixel_int = settings.process.pixel_size as usize;
+    let col_sel = settings.process.col_sel;
+    let pixels = ctx.store.get::<PixelArray>();
+    let rect = settings.place.rect.unwrap_or_else(|| {
+        let [WorldPos(x, y), WorldPos(w, h)] = pixels.get_bounds();
+        Rect::new(x, y, w, h)
+    });
+
+    let w = rect.w as u16;
+    let h = rect.h as u16;
+
+    let texture = Texture2D::from_rgba8(w * pixel_int as u16, h * pixel_int as u16, &vec![0; w as usize * h as usize * pixel_int * pixel_int * 4]);
+    let render_target = render_target(w as u32, h as u32);
+    render_target.texture.set_filter(FilterMode::Nearest);
+    
+    // Set camera to render to our target
+    set_camera(&Camera2D {
+        target: vec2(rect.w / 2.0, rect.h / 2.0),
+        zoom: vec2(1.0 / (rect.w / 2.0), 1.0 / (rect.h / 2.0)),
+        render_target: Some(render_target.clone()),
+        ..Default::default()
+    });
+
+    if settings.place.temperature == 0.0 {
+        for pixel in pixels.iter() {
+            let col = col_sel.col_from_rgba_arr(pixel.col);
+            let mut iter = textures.iter();
+            let mut best_texture = iter.next().unwrap();
+            let mut best_value = col.distance(best_texture.average);
+            for texture in iter {
+                let value = col.distance(texture.average);
+                if value < best_value {
+                    best_texture = texture;
+                    best_value = value;
+                }
+            }
+            draw_texture(&best_texture.texture, pixel.pos[0] as f32 * pixel_size, pixel.pos[1] as f32 * pixel_size, WHITE);
+        }
+    }
+
+    set_default_camera();
+    texture
 }
 
 fn is_likely_image_file(path: &Path) -> bool {
@@ -156,7 +209,8 @@ fn load_images_parallel(
     paths: Vec<PathBuf>,
     tx: Sender<LoaderMsg>,
     cancel: CancelToken,
-    col_sel: ColSelection
+    col_sel: ColSelection,
+    pixel_size: Option<u32>
 ) {
     let total = paths.len();
 
@@ -185,8 +239,23 @@ fn load_images_parallel(
                 }
             };
 
+            let (w, h, img) = if let Some(pixel_size) = pixel_size {
+                let filter = if pixel_size > img.width() || pixel_size > img.height() {
+                    image::imageops::CatmullRom
+                } else {
+                    image::imageops::Lanczos3
+                };
+    
+                (
+                    pixel_size,
+                    pixel_size,
+                    img.resize_exact(pixel_size, pixel_size, filter)
+                )
+            } else {
+                (img.width(), img.height(), img)
+            };
+
             let img = img.to_rgba8();
-            let (w, h) = img.dimensions();
 
             let _ = tx_clone.send(LoaderMsg::Image(RawTexture::new(w as u16, h as u16, img.into_raw(), col_sel)));
 

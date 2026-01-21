@@ -386,6 +386,10 @@ impl PixelArray {
             }
         }
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Pixel> {
+        self.pixels.iter()
+    }
 }
 
 impl WorldPos {
