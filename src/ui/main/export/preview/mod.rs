@@ -8,6 +8,7 @@ use process::AsyncTextureLoader;
 use macroquad::prelude::*;
 use super::*;
 // todo!() Add exporting just as pixels.
+// todo!() handle case where user inputs invalid image file format (currently panics)
 #[derive(Debug)]
 pub struct Texture {
     texture: Texture2D,
@@ -31,7 +32,7 @@ pub struct Preview {
 
 impl New for Preview {
     fn new(handler: &mut GenHandler) -> Self {
-        handler.push_data(ExportSettings::new(None, 0.0, ColSelection::OkLab, 16));
+        handler.push_data(ExportSettings::new(None, 0.0, ColSelection::OkLab, 256));
         Self {
             texture_loader: None,
         }
@@ -73,7 +74,7 @@ impl Node for Preview {
                         if sub_ui_button(progress_rect, "Result generated. Click to save.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) &&
                             let Some(out_path) = save_file("Save as")
                         {
-                            texture.get_texture_data().export_png(&out_path.display().to_string());
+                            texture.export_png(&out_path.display().to_string());
                             self.texture_loader = None;
                         };
                     },

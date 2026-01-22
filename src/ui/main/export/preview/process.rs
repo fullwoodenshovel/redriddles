@@ -25,7 +25,7 @@ pub enum LoaderStatus {
         frac: f32,
         current: String
     },
-    Done(Texture2D),
+    Done(Image),
     Cancelled,
     Error(String)
 }
@@ -144,34 +144,39 @@ impl AsyncTextureLoader {
     }
 }
 
-fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Texture2D {
+fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Image {
     let settings = ctx.store.get::<ExportSettings>();
     let pixel_size = settings.process.pixel_size as f32;
-    let pixel_int = settings.process.pixel_size as usize;
+    let pixel_int = settings.process.pixel_size;
     let col_sel = settings.process.col_sel;
     let pixels = ctx.store.get::<PixelArray>();
     let rect = settings.place.rect.unwrap_or_else(|| {
         let [WorldPos(x, y), WorldPos(w, h)] = pixels.get_bounds();
-        Rect::new(x, y, w, h)
+        Rect::new(x, y, w - x + 1.0, h - y + 1.0)
     });
 
     let w = rect.w as u16;
     let h = rect.h as u16;
 
-    let texture = Texture2D::from_rgba8(w * pixel_int as u16, h * pixel_int as u16, &vec![0; w as usize * h as usize * pixel_int * pixel_int * 4]);
-    let render_target = render_target(w as u32, h as u32);
+    let target_w = w as f32 * pixel_size;
+    let target_h = h as f32 * pixel_size;
+
+    let render_target = render_target(w as u32 * pixel_int, h as u32 * pixel_int);
     render_target.texture.set_filter(FilterMode::Nearest);
     
-    // Set camera to render to our target
     set_camera(&Camera2D {
-        target: vec2(rect.w / 2.0, rect.h / 2.0),
-        zoom: vec2(1.0 / (rect.w / 2.0), 1.0 / (rect.h / 2.0)),
+        target: vec2(target_w / 2.0, target_h / 2.0),
+        zoom: vec2(2.0 / target_w, 2.0 / target_h),
         render_target: Some(render_target.clone()),
         ..Default::default()
     });
+    
+    clear_background(BLANK);
 
     if settings.place.temperature == 0.0 {
         for pixel in pixels.iter() {
+            let x = pixel.pos[0] as f32 - rect.x;
+            let y = pixel.pos[1] as f32 - rect.y;
             let col = col_sel.col_from_rgba_arr(pixel.col);
             let mut iter = textures.iter();
             let mut best_texture = iter.next().unwrap();
@@ -183,12 +188,30 @@ fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Textur
                     best_value = value;
                 }
             }
-            draw_texture(&best_texture.texture, pixel.pos[0] as f32 * pixel_size, pixel.pos[1] as f32 * pixel_size, WHITE);
+            draw_texture(&best_texture.texture, x * pixel_size, y * pixel_size, WHITE);
         }
     }
 
     set_default_camera();
-    texture
+
+    let mut result = render_target.texture.get_texture_data();
+    flip_image_vertically(&mut result);
+    result
+}
+
+fn flip_image_vertically(img: &mut macroquad::texture::Image) {
+    let w = img.width as usize;
+    let h = img.height as usize;
+    let row_bytes = w * 4;
+
+    for y in 0 .. h / 2 {
+        let top_start = y * row_bytes;
+        let bot_start = (h - 1 - y) * row_bytes;
+
+        for i in 0 .. row_bytes {
+            img.bytes.swap(top_start + i, bot_start + i);
+        }
+    }
 }
 
 fn is_likely_image_file(path: &Path) -> bool {

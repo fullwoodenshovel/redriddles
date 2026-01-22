@@ -300,16 +300,17 @@ impl PixelArray {
     }
 
     pub fn get_bounds(&self) -> [WorldPos; 2] { // top left and bottom right corner
-        if self.pixels.is_empty() {
+        let mut iter = self.pixels.iter();
+        let Some(pixel) = iter.next() else {
             return [WorldPos(-1.0, -1.0), WorldPos(1.0, 1.0)]
-        }
+        };
 
-        let mut minx = i16::MAX;
-        let mut miny = i16::MAX;
-        let mut maxx = i16::MIN;
-        let mut maxy = i16::MIN;
+        let mut minx = pixel.pos[0];
+        let mut miny = pixel.pos[1];
+        let mut maxx = pixel.pos[0];
+        let mut maxy = pixel.pos[1];
         
-        for pixel in &self.pixels {
+        for pixel in iter {
             let [x, y] = pixel.pos;
             if minx > x {
                 minx = x;
