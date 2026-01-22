@@ -4,7 +4,7 @@ use super::*;
 mod select_folder;
 use select_folder::SelectFolder;
 mod export_settings;
-use export_settings::{ExportSettings, ExportSettingsNode, PlaceSettings, ProcessSettings};
+use export_settings::{ExportSettings, ExportSettingsNode, ProcessSettings};
 mod preview;
 use preview::Preview;
 // todo!() Add importing from a file to automatically make the pixels

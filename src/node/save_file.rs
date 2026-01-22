@@ -126,7 +126,7 @@ impl SaveDataStore {
                     The repeated pair is `{}` -> `{}`",
                     shortcut_to_string(&old_shortcut), old_instruction)
                 ),
-                Overwritten::Both((old_shortcut1, old_instruction1), (old_shortcut2, old_instruction2)) => // todo!() TODO TEST THIS
+                Overwritten::Both((old_shortcut1, old_instruction1), (old_shortcut2, old_instruction2)) =>
                     Some(format!("Three definitions of the same shortcut `{}` and the same instruction `{}`.\n\
                     The following three definitions exist:\n\
                     `{}` -> `{}`\n\

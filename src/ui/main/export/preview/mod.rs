@@ -4,11 +4,13 @@ mod process;
 mod texture;
 use texture::RawTexture;
 
-use process::AsyncTextureLoader;
+use process::LoaderWrapper;
 use macroquad::prelude::*;
 use super::*;
 // todo!() Add exporting just as pixels.
-// todo!() handle case where user inputs invalid image file format (currently panics)
+// todo!() Add support for changing already existing settings (pixel size, colour space, temperature)
+// todo!() Add saving colours persistently and colour gradient thing
+// todo!() possibly add workspaces
 #[derive(Debug)]
 pub struct Texture {
     texture: Texture2D,
@@ -27,7 +29,7 @@ impl Texture {
 }
 
 pub struct Preview {
-    texture_loader: Option<AsyncTextureLoader>,
+    texture_loader: Option<LoaderWrapper>,
 }
 
 impl New for Preview {
@@ -57,7 +59,7 @@ impl Node for Preview {
                         if sub_ui_button(progress_rect, "Generate result.", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs) {
                             println!("todo!(); HANDLE THIS ERROR CORRECTLY");
                             let settings = ctx.store.get::<ExportSettings>();
-                            self.texture_loader = Some(AsyncTextureLoader::with_folder(path.clone(), settings.process).unwrap()); // <- This unwrap
+                            self.texture_loader = Some(LoaderWrapper::with_folder(path.clone(), settings.process));
                         }
                     },
                     None => disabled_ui_button(progress_rect, "Select a folder first.", DISABLEDCOL)
@@ -65,17 +67,16 @@ impl Node for Preview {
             },
             Some(loader) => {
                 match loader.get_status(ctx) {
-                    LoaderStatus::Cancelled => { // todo!() This does not work for some reason.
+                    LoaderStatus::Cancelled => {
                         if sub_ui_button(progress_rect, "Result cancelled. Click to enable.", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs) {
                             self.texture_loader = None;
                         }
                     },
-                    LoaderStatus::Done(texture) => {
+                    LoaderStatus::Done => {
                         if sub_ui_button(progress_rect, "Result generated. Click to save.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) &&
                             let Some(out_path) = save_file("Save as")
                         {
-                            texture.export_png(&out_path.display().to_string());
-                            self.texture_loader = None;
+                            loader.export_png(&out_path);
                         };
                     },
                     LoaderStatus::Loading { frac, current } => {
@@ -88,10 +89,16 @@ impl Node for Preview {
                             self.texture_loader.as_mut().unwrap().cancel();
                         }
                     },
-                    LoaderStatus::Error(err) => {
+                    LoaderStatus::GenError(err) => {
                         multiline_text(text_rect, err);
                         if sub_ui_button(progress_rect, "Error generating.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) {
                             self.texture_loader = None;
+                        };
+                    },
+                    LoaderStatus::SaveError(err) => {
+                        multiline_text(text_rect, err);
+                        if sub_ui_button(progress_rect, "Error saving file.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) {
+                            loader.reset_save_err();
                         };
                     }
                 }

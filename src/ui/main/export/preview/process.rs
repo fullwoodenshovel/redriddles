@@ -20,17 +20,19 @@ pub enum LoaderMsg {
     Error(String),
 }
 
+#[derive(Debug)]
 pub enum LoaderStatus {
     Loading {
         frac: f32,
         current: String
     },
-    Done(Image),
+    Done,
     Cancelled,
-    Error(String)
+    GenError(String),
+    SaveError(String)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CancelToken {
     cancelled: std::sync::Arc<AtomicBool>,
 }
@@ -51,12 +53,49 @@ impl CancelToken {
     }
 }
 
-pub struct AsyncTextureLoader {
+#[derive(Debug)]
+struct AsyncTextureLoader {
     rx: Receiver<LoaderMsg>,
     cancel: CancelToken,
     status: LoaderStatus,
     textures: Vec<Texture>,
-    loaded: usize
+    loaded: usize,
+    result: Option<Image>
+}
+
+pub struct LoaderWrapper {
+    loader: Result<AsyncTextureLoader, LoaderStatus>
+}
+
+impl LoaderWrapper {
+    pub fn with_folder(path: PathBuf, settings: ProcessSettings) -> Self {
+        Self {
+            loader: AsyncTextureLoader::with_folder(path, settings).map_err(LoaderStatus::GenError)
+        }
+    }
+
+    pub fn cancel(&mut self) {
+        self.loader.as_mut().unwrap().cancel();
+    }
+
+    pub fn get_status(&mut self, ctx: &mut AppContextHandler) -> &mut LoaderStatus {
+        match &mut self.loader {
+            Ok(loader) => loader.get_status(ctx),
+            Err(err) => err
+        }
+    }
+
+    pub fn reset_save_err(&mut self) {
+        self.loader.as_mut().unwrap().reset_save_err()
+    }
+
+    pub fn export_png(&mut self, path: impl AsRef<std::path::Path>) {
+        self.loader.as_mut().unwrap().export_png(path);
+    }
+
+    pub fn get_img(&self) -> Option<&Image> {
+        self.loader.as_ref().unwrap().result.as_ref()
+    }
 }
 
 impl AsyncTextureLoader {
@@ -107,7 +146,8 @@ impl AsyncTextureLoader {
             cancel,
             status: LoaderStatus::Loading { frac: 0.0, current: "Initialising.".to_string() },
             textures: Vec::new(),
-            loaded: 0
+            loaded: 0,
+            result: None
         }
     }
 
@@ -117,7 +157,7 @@ impl AsyncTextureLoader {
     }
 
     pub fn get_status(&mut self, ctx: &mut AppContextHandler) -> &mut LoaderStatus {
-        if !matches!(self.status, LoaderStatus::Error(_) | LoaderStatus::Done(_) | LoaderStatus::Cancelled) {
+        if !matches!(self.status, LoaderStatus::SaveError(_) | LoaderStatus::GenError(_) | LoaderStatus::Done | LoaderStatus::Cancelled) {
             while let Ok(result) = self.rx.try_recv() {
                 match result {
                     LoaderMsg::Progress { loaded, total, current } => {
@@ -127,14 +167,15 @@ impl AsyncTextureLoader {
                     LoaderMsg::Image(texture) => self.textures.push(Texture::from_raw(texture)),
                     LoaderMsg::Done => {
                         if self.textures.is_empty() {
-                            self.status = LoaderStatus::Error("Couldn't find any valid image files in that folder.".to_string());
+                            self.status = LoaderStatus::GenError("Couldn't find any valid image files in that folder.".to_string());
                         } else {
-                            self.status = LoaderStatus::Done(generate_image(std::mem::take(&mut self.textures), ctx));
+                            self.status = LoaderStatus::Done;
+                            self.result = Some(generate_image(std::mem::take(&mut self.textures), ctx));
                             break;
                         }
                     },
                     LoaderMsg::Error(err) => {
-                        self.status = LoaderStatus::Error(err);
+                        self.status = LoaderStatus::GenError(err);
                         break;
                     },
                 }
@@ -142,6 +183,37 @@ impl AsyncTextureLoader {
         }
         &mut self.status
     }
+
+    pub fn reset_save_err(&mut self) {
+        if let LoaderStatus::SaveError(_) = self.status {
+            self.status = LoaderStatus::Done;
+        } else {
+            panic!("Tried to reset save error, but it wasn't in an errored state.");
+        }
+    }
+
+    pub fn export_png(&mut self, path: impl AsRef<std::path::Path>) {
+        if let Err(err) = save_img(self.result.as_ref().unwrap(), path) {
+            self.status = LoaderStatus::SaveError(err.to_string())
+        }
+    } 
+}
+
+use image::{ImageBuffer, Rgba};
+use macroquad::prelude::*;
+
+pub fn save_img(img: &Image, path: impl AsRef<std::path::Path>) -> Result<(), image::ImageError> {
+    let width = img.width as u32;
+    let height = img.height as u32;
+    let bytes = &img.bytes;
+
+    let buffer: ImageBuffer<Rgba<u8>, _> =
+        ImageBuffer::from_raw(width, height, bytes.to_vec())
+            .ok_or_else(|| image::ImageError::Limits(image::error::LimitError::from_kind(
+                image::error::LimitErrorKind::DimensionError,
+            )))?;
+
+    buffer.save(path)
 }
 
 fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Image {
@@ -194,24 +266,7 @@ fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Image 
 
     set_default_camera();
 
-    let mut result = render_target.texture.get_texture_data();
-    flip_image_vertically(&mut result);
-    result
-}
-
-fn flip_image_vertically(img: &mut macroquad::texture::Image) {
-    let w = img.width as usize;
-    let h = img.height as usize;
-    let row_bytes = w * 4;
-
-    for y in 0 .. h / 2 {
-        let top_start = y * row_bytes;
-        let bot_start = (h - 1 - y) * row_bytes;
-
-        for i in 0 .. row_bytes {
-            img.bytes.swap(top_start + i, bot_start + i);
-        }
-    }
+    render_target.texture.get_texture_data()
 }
 
 fn is_likely_image_file(path: &Path) -> bool {
