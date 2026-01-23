@@ -1,4 +1,4 @@
-use macroquad::{prelude::{Color, Rect, Vec2, draw_circle_lines, draw_rectangle, draw_triangle}};
+use macroquad::prelude::*;
 
 use crate::{colour::Col, colour_picker::{SurfaceCache, picker::Circular}};
 use super::{ColSelection, ColPicker, PickerEnum, PickerSelection};
@@ -47,7 +47,7 @@ impl ColPicker for Linear {
     }
     
     fn detect(&mut self, mouse: Vec2, first_mouse_down: Vec2) {
-        let offset = Vec2::new(self.offset[0], self.offset[1]);
+        let offset = vec2(self.offset[0], self.offset[1]);
         let mouse = mouse - offset;
         let slider_rect = Rect::new(self.height + self.padding, 0.0, self.width, self.height);
         let picker_rect = Rect::new(0.0, 0.0, self.height, self.height);
@@ -123,9 +123,9 @@ impl ColPicker for Linear {
             let x = self.height + self.padding + self.offset[0];
             let y = self.height * (1.0 - scalar) + self.offset[1];
             draw_triangle(
-                Vec2::new(x, y),
-                Vec2::new(x - self.padding/2.0, y - self.padding/3.0),
-                Vec2::new(x - self.padding/2.0, y + self.padding/3.0),
+                vec2(x, y),
+                vec2(x - self.padding/2.0, y - self.padding/3.0),
+                vec2(x - self.padding/2.0, y + self.padding/3.0),
                 Color::from_hex(0xFFFFFF)
                 );
         

@@ -17,15 +17,15 @@ pub fn ui_button(rect: Rect, label: &str, default_col: Color, hover_col: Color, 
 
 pub fn sub_ui_button(rect: Rect, label: &str, default_col: Color, hover_col: Color, node: &NodeStore, user_inputs: &UserInputs) -> bool {
     let hovered = user_inputs.hover_test(node) && rect.contains(user_inputs.mouse);
-    let let_go = hovered && user_inputs.left_let_go && user_inputs.last_touch_test(node);
+    let let_go = hovered && user_inputs.left_let_go && user_inputs.last_touch_test(node) && rect.contains(user_inputs.lasttouch_mouse);
 
     raw_ui_button(rect, label, hovered, let_go, default_col, hover_col)
 }
 
 pub fn cut_text(text: &mut String, width: f32) {
-    if measure_text(&text, None, 18, 1.0).width > width - 16.0 {
+    if measure_text(text, None, 18, 1.0).width > width - 16.0 {
         *text = format!("...{text}");
-        while text.len() > 3 && measure_text(&text, None, 18, 1.0).width > width - 16.0 {
+        while text.len() > 3 && measure_text(text, None, 18, 1.0).width > width - 16.0 {
             text.remove(3);
         }
     }

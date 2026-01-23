@@ -7,7 +7,7 @@ mod export_settings;
 use export_settings::{ExportSettings, ExportSettingsNode, ProcessSettings};
 mod preview;
 use preview::Preview;
-// todo!() Add importing from a file to automatically make the pixels
+
 fn pick_folder(title: &str) -> Option<std::path::PathBuf> {
     FileDialog::new()
         .set_title(title)

@@ -7,10 +7,13 @@ use texture::RawTexture;
 use process::LoaderWrapper;
 use macroquad::prelude::*;
 use super::*;
+// todo!() Add support for changing already existing settings (pixel size, colour space, temperature, transparency filter)
 // todo!() Add exporting just as pixels.
-// todo!() Add support for changing already existing settings (pixel size, colour space, temperature)
+// todo!() Add warning if image size is above 1920 x 1080
+// BUMP VERSION
 // todo!() Add saving colours persistently and colour gradient thing
-// todo!() possibly add workspaces
+// todo!() Add workspaces and importing from a file to automatically make the pixels. Make the current drawing an image
+// todo!() Add ctrl + z and ctrl + y
 #[derive(Debug)]
 pub struct Texture {
     texture: Texture2D,
@@ -30,13 +33,15 @@ impl Texture {
 
 pub struct Preview {
     texture_loader: Option<LoaderWrapper>,
+    texture: Option<Image>
 }
 
 impl New for Preview {
     fn new(handler: &mut GenHandler) -> Self {
-        handler.push_data(ExportSettings::new(None, 0.0, ColSelection::OkLab, 256));
+        handler.push_data(ExportSettings::new(None, 0.01, ColSelection::OkLab, 128, 1.0));
         Self {
             texture_loader: None,
+            texture: None
         }
     }
 }
@@ -56,7 +61,14 @@ impl Node for Preview {
                 let settings = ctx.store.get::<ExportSettings>();
                 match &settings.path {
                     Some(path) => {
-                        if sub_ui_button(progress_rect, "Generate result.", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs) {
+                        if sub_ui_button(
+                            progress_rect,
+                            "Generate result.",
+                            DISABLEDCOL,
+                            DISABLEDHOVERCOL,
+                            node,
+                            ctx.user_inputs
+                        ) {
                             println!("todo!(); HANDLE THIS ERROR CORRECTLY");
                             let settings = ctx.store.get::<ExportSettings>();
                             self.texture_loader = Some(LoaderWrapper::with_folder(path.clone(), settings.process));
@@ -66,39 +78,76 @@ impl Node for Preview {
                 }
             },
             Some(loader) => {
-                match loader.get_status(ctx) {
+                match loader.get_status() {
                     LoaderStatus::Cancelled => {
-                        if sub_ui_button(progress_rect, "Result cancelled. Click to enable.", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs) {
+                        if sub_ui_button(
+                            progress_rect,
+                            "Result cancelled. Click to enable.",
+                            DISABLEDCOL,
+                            DISABLEDHOVERCOL,
+                            node,
+                            ctx.user_inputs
+                        ) {
                             self.texture_loader = None;
                         }
                     },
                     LoaderStatus::Done => {
-                        if sub_ui_button(progress_rect, "Result generated. Click to save.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) &&
+                        let image = match self.texture.as_ref() {
+                            Some(image) => image,
+                            None => {
+                                self.texture = Some(loader.get_loader_mut().unwrap().generate_image(ctx));
+                                self.texture.as_ref().unwrap()
+                            }
+                        };
+                        if sub_ui_button(
+                            progress_rect,
+                            "Result generated. Click to save.",
+                            ENABLEDCOL,
+                            ENABLEDHOVERCOL,
+                            node,
+                            ctx.user_inputs
+                        ) &&
                             let Some(out_path) = save_file("Save as")
                         {
-                            loader.export_png(&out_path);
+                            loader.get_loader_mut().unwrap().export_png(image, &out_path);
+                            self.texture_loader = None; // todo!() Make this go into the textures loaded but image not generated state
                         };
                     },
                     LoaderStatus::Loading { frac, current } => {
                         let inner = sub_ui_button(progress_rect, "", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs);
-                        let outer = sub_ui_button(get_done_rect(*frac), "Generating. Click to cancel.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs);
-                        cut_text(current, text_rect.w);
-                        disabled_ui_button(text_rect, current, WHITE);
-                        
-                        if outer || inner {
-                            self.texture_loader.as_mut().unwrap().cancel();
+                        disabled_ui_button(get_done_rect(*frac), "Generating. Click to cancel.", ENABLEDCOL);
+                        let mut current = current.clone();
+                        cut_text(&mut current, text_rect.w);
+                        disabled_ui_button(text_rect, &current, WHITE);
+
+                        if inner {
+                            loader.get_loader_mut().unwrap().cancel();
                         }
                     },
                     LoaderStatus::GenError(err) => {
                         multiline_text(text_rect, err);
-                        if sub_ui_button(progress_rect, "Error generating.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) {
+                        if sub_ui_button(
+                            progress_rect,
+                            "Error generating.",
+                            ENABLEDCOL,
+                            ENABLEDHOVERCOL,
+                            node,
+                            ctx.user_inputs
+                        ) {
                             self.texture_loader = None;
                         };
                     },
                     LoaderStatus::SaveError(err) => {
                         multiline_text(text_rect, err);
-                        if sub_ui_button(progress_rect, "Error saving file.", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) {
-                            loader.reset_save_err();
+                        if sub_ui_button(
+                            progress_rect,
+                            "Error saving file.",
+                            ENABLEDCOL,
+                            ENABLEDHOVERCOL,
+                            node,
+                            ctx.user_inputs
+                        ) {
+                            loader.get_loader_mut().unwrap().reset_save_err();
                         };
                     }
                 }

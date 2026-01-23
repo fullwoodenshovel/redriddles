@@ -18,7 +18,9 @@ impl Node for SelectFolder {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         let rect = Rect::new(28.0, 100.0, 150.0, 38.0);
         let selected_path: &mut Option<PathBuf> = &mut ctx.store.get_mut::<ExportSettings>().path;
-        if sub_ui_button(rect, "Select new folder", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) && let Some(folder) = pick_folder("Select a folder") {
+        if sub_ui_button(rect, "Select new folder", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) &&
+            let Some(folder) = pick_folder("Select a folder")
+        {
             ctx.save_data.cached_dirs.retain(|d| *d != folder);
             ctx.save_data.cached_dirs.push_front(folder);
             if ctx.save_data.cached_dirs.len() > 10 {

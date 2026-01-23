@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use macroquad::{camera::{Camera2D, set_camera, set_default_camera}, color::{Color, WHITE}, math::{Rect, Vec2}, texture::{DrawTextureParams, FilterMode, RenderTarget, draw_texture_ex, render_target}, window::clear_background};
+use macroquad::prelude::*;
 use enum_dispatch::enum_dispatch;
 
 use crate::{colour::ColSelection, node::{GenHandler, New, Node, NodeStore, AppContextHandler, Store, WeakNode, ShortcutInstruction}};
@@ -141,8 +141,8 @@ impl SurfaceCache {
         Self {
             dirty: true,
             surface,
-            offset: Vec2::new(rect.x, rect.y),
-            size: Vec2::new(rect.w, rect.h)
+            offset: vec2(rect.x, rect.y),
+            size: vec2(rect.w, rect.h)
         }
     }
 
@@ -173,7 +173,7 @@ impl SurfaceCache {
 
         set_camera(&Camera2D {
             target: self.size / 2.0,
-            zoom: Vec2::new(2.0, 2.0) / self.size,
+            zoom: vec2(2.0, 2.0) / self.size,
             render_target: Some(self.surface.clone()),
             ..Default::default()
         });

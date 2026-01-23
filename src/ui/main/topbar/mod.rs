@@ -54,7 +54,7 @@ impl<const INDEX: u8> NewNoOut for Topbar<INDEX> {
         }
 
         Self {
-            size: Vec2::new(screen_width(), 40.0),
+            size: vec2(screen_width(), 40.0),
             label
         }
     }

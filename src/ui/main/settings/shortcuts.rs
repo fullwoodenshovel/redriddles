@@ -22,7 +22,14 @@ impl New for Shortcuts {
 impl Node for Shortcuts {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         let hover_possible = ctx.user_inputs.hoverhold_test(node);
-        for (index, (shortcut, instruction)) in ctx.save_data.shortcuts.get_owned_shortcuts().into_iter().enumerate() {
+        for (index, (shortcut, instruction)) in 
+                ctx
+                .save_data
+                .shortcuts
+                .get_owned_shortcuts()
+                .into_iter()
+                .enumerate()
+        {
             disabled_ui_button(Rect::new(26.0, 32.0 * index as f32 + 106.0, 300.0, 26.0), &format!("{instruction}"), DISABLEDCOL);
             
             let remove_rect = Rect::new(352.0, 32.0 * index as f32 + 106.0, 80.0, 26.0);

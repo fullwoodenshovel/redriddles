@@ -35,8 +35,8 @@ impl New for Sidebar {
         handler.push_child_io::<DrawStateButton>(("Fill", Rect::new(10.0, 550.0, 133.0, 28.0), DrawState::Fill));
 
         Self {
-            start_pos: Vec2::new(0.0, 40.0),
-            size: Vec2::new(150.0, screen_height() - 40.0),
+            start_pos: vec2(0.0, 40.0),
+            size: vec2(150.0, screen_height() - 40.0),
         }
         
     }
