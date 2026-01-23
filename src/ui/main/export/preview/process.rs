@@ -93,8 +93,18 @@ impl LoaderWrapper {
         self.loader.as_mut().unwrap().export_png(path);
     }
 
-    pub fn get_img(&self) -> Option<&Image> {
-        self.loader.as_ref().unwrap().result.as_ref()
+    pub fn try_get_img(&self) -> Result<&Image, String> {
+        match match self.loader.as_ref() { // match match :)
+            Ok(result) => result,
+            Err(err) => if let LoaderStatus::GenError(err) = err {
+                return Err(err.clone())
+            } else {
+                panic!("The err variant of LoaderWrapper should always be GenError")
+            }
+        }.result.as_ref() {
+            Some(result) => Ok(result),
+            None => Err("First load in a texture file.".to_string())
+        }
     }
 }
 
@@ -196,7 +206,7 @@ impl AsyncTextureLoader {
         if let Err(err) = save_img(self.result.as_ref().unwrap(), path) {
             self.status = LoaderStatus::SaveError(err.to_string())
         }
-    } 
+    }
 }
 
 use image::{ImageBuffer, Rgba};
@@ -261,6 +271,42 @@ fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Image 
                 }
             }
             draw_texture(&best_texture.texture, x * pixel_size, y * pixel_size, WHITE);
+        }
+    } else {
+        for pixel in pixels.iter() {
+            // store colour difference per texture, stored in a vector of tuples, then generate random nhmber between 0 and 1 and calculate cumulative until exceeding a value
+            let x = pixel.pos[0] as f32 - rect.x;
+            let y = pixel.pos[1] as f32 - rect.y;
+            let col = col_sel.col_from_rgba_arr(pixel.col);
+            let mut total = 0.0;
+            let a = (settings.place.temperature - 1.0) / settings.place.temperature;
+
+            let mut raw = Vec::new();
+            for texture in &textures {
+                let cost = col.distance(texture.average);
+                let prob = (a * cost).exp();
+                total += prob;
+                raw.push((texture, prob));
+            }
+
+            let scale = 1.0 / total;
+
+            let rand = rand::rand() as f32 / u32::MAX as f32;
+            let mut cumulative = 0.0;
+
+            let mut selected_texture = None;
+
+            for (texture, prob) in raw {
+                cumulative += prob * scale;
+                if cumulative >= rand {
+                    selected_texture = Some(texture);
+                    break;
+                }
+            }
+
+            let selected_texture = selected_texture.unwrap_or_else(|| &textures[0]);
+
+            draw_texture(&selected_texture.texture, x * pixel_size, y * pixel_size, WHITE);
         }
     }
 
