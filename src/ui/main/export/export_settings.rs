@@ -9,18 +9,18 @@ pub struct ExportSettings {
 }
 
 impl ExportSettings {
-    pub fn new(path: Option<PathBuf>, temperature: f32, col_sel: ColSelection, pixel_size: u32, accept_transparent: f32) -> Self {
+    pub fn new(path: Option<PathBuf>, temperature: f32, averaging_col: ColSelection, distance_col: ColSelection, pixel_size: u32, accept_transparent: f32) -> Self {
         Self {
             path,
-            process: ProcessSettings { col_sel, pixel_size, accept_transparent, changed_this_frame: false },
-            place: PlaceSettings { temperature, rect: None }
+            process: ProcessSettings { averaging_col, pixel_size, accept_transparent, changed_this_frame: false },
+            place: PlaceSettings { distance_col, temperature, rect: None }
         }
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct ProcessSettings {
-    pub col_sel: ColSelection,
+    pub averaging_col: ColSelection,
     pub pixel_size: u32,
     pub accept_transparent: f32,
     pub changed_this_frame: bool
@@ -28,6 +28,7 @@ pub struct ProcessSettings {
 
 #[derive(Clone, Copy)]
 pub struct PlaceSettings {
+    pub distance_col: ColSelection,
     pub temperature: f32,
     pub rect: Option<Rect>,
 }
@@ -49,19 +50,15 @@ impl Node for ExportSettingsNode {
         let process = &mut ctx.store.get_mut::<ExportSettings>().process;
 
         draw_text("Changing this requires textures to be reloaded.", 220.0, 130.0, 18.0, BLACK);
-        
+
         if sub_ui_button(
-            Rect::new(150.0, 150.0, 300.0, 38.0), &format!("Colour space averaging: {}", process.col_sel),
+            Rect::new(150.0, 150.0, 300.0, 38.0), &format!("Averaging colour space: {}", process.averaging_col),
             DISABLEDCOL,
             DISABLEDHOVERCOL,
             node,
             ctx.user_inputs)
         {
-            match process.col_sel {
-                ColSelection::Hsva  => process.col_sel = ColSelection::OkLab,
-                ColSelection::OkLab => process.col_sel = ColSelection::Rgba,
-                ColSelection::Rgba  => process.col_sel = ColSelection::Hsva
-            }
+            process.averaging_col = process.averaging_col.toggle();
             process.changed_this_frame = true;
         }
 

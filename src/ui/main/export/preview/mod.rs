@@ -8,8 +8,6 @@ use process::{LoaderWrapper, save_img};
 use macroquad::prelude::*;
 
 use super::*;
-// todo!() Add exporting just as pixels.
-// BUMP VERSION
 // todo!() Add saving colours persistently and colour gradient thing
 // todo!() Add workspaces and importing from a file to automatically make the pixels. Make the current drawing an image
 // todo!() Add ctrl + z and ctrl + y
@@ -37,7 +35,7 @@ pub struct Preview {
 
 impl New for Preview {
     fn new(handler: &mut GenHandler) -> Self {
-        handler.push_data(ExportSettings::new(None, 0.0, ColSelection::OkLab, 128, 1.0));
+        handler.push_data(ExportSettings::new(None, 0.0, ColSelection::OkLab, ColSelection::OkLab, 128, 1.0));
         Self {
             texture_loader: None,
             texture: None
@@ -207,7 +205,7 @@ impl Node for Preview {
         if let Some(value) = slider(
             ENABLEDCOL,
             DISABLEDCOL,
-            Rect::new(50.0, 230.0, 300.0, 18.0),
+            Rect::new(50.0, 250.0, 300.0, 18.0),
             &format!("Temperature: {:.2}", place.temperature),
             place.temperature,
             0.0,
@@ -218,7 +216,18 @@ impl Node for Preview {
             place.temperature = value;
         }
 
-        let rect = Rect::new(50.0, 180.0, 300.0, 26.0);
+        if sub_ui_button(
+            Rect::new(50.0, 290.0, 300.0, 26.0), &format!("Distance colour space: {}", settings.place.distance_col),
+            DISABLEDCOL,
+            DISABLEDHOVERCOL,
+            node,
+            ctx.user_inputs)
+        {
+            settings.place.distance_col = settings.place.distance_col.toggle();
+        }
+
+
+        let rect = Rect::new(50.0, 190.0, 300.0, 26.0);
         if let Some(Ok(loader)) = self.texture_loader.as_ref().map(|loader| loader.get_loader()) &&
             loader.is_loaded()
         {

@@ -133,7 +133,7 @@ impl AsyncTextureLoader {
                 paths,
                 tx,
                 cancel_clone,
-                process_settings.col_sel,
+                process_settings.averaging_col,
                 Some(process_settings.pixel_size),
                 process_settings.accept_transparent
             );
@@ -198,8 +198,8 @@ impl AsyncTextureLoader {
         }
     }
 
-    pub fn generate_image(&self, ctx: &mut AppContextHandler) -> Texture2D {
-        generate_image(&self.textures, ctx)
+    pub fn generate_image(&self, store: &mut Store) -> Texture2D {
+        generate_image(&self.textures, store)
     }
 
     pub fn set_status(&mut self, status: LoaderStatus) {
@@ -224,12 +224,12 @@ pub fn save_img(img: &Image, path: impl AsRef<std::path::Path>) -> Result<(), im
     buffer.save(path)
 }
 
-fn generate_image(textures: &[Texture], ctx: &mut AppContextHandler) -> Texture2D {
-    let settings = ctx.store.get::<ExportSettings>();
+fn generate_image(textures: &[Texture], store: &mut Store) -> Texture2D {
+    let settings = store.get::<ExportSettings>();
     let pixel_size = settings.process.pixel_size as f32;
     let pixel_int = settings.process.pixel_size;
-    let col_sel = settings.process.col_sel;
-    let pixels = ctx.store.get::<PixelArray>();
+    let col_sel = settings.place.distance_col;
+    let pixels = store.get::<PixelArray>();
     let rect = settings.place.rect.unwrap_or_else(|| {
         let [WorldPos(x, y), WorldPos(w, h)] = pixels.get_bounds();
         Rect::new(x, y, w - x + 1.0, h - y + 1.0)
@@ -245,8 +245,8 @@ fn generate_image(textures: &[Texture], ctx: &mut AppContextHandler) -> Texture2
     render_target.texture.set_filter(FilterMode::Nearest);
     
     set_camera(&Camera2D {
-        target: vec2(target_w / 2.0, target_h / 2.0),
-        zoom: vec2(2.0 / target_w, 2.0 / target_h),
+        target: vec2(target_w, target_h) / 2.0,
+        zoom: 2.0 / vec2(target_w, target_h),
         render_target: Some(render_target.clone()),
         ..Default::default()
     });
@@ -330,7 +330,7 @@ fn load_images_parallel(
     paths: Vec<PathBuf>,
     tx: Sender<LoaderMsg>,
     cancel: CancelToken,
-    col_sel: ColSelection,
+    averaging_col: ColSelection,
     pixel_size: Option<u32>,
     accept_transparent: f32
 ) {
@@ -379,7 +379,7 @@ fn load_images_parallel(
 
             let img = img.to_rgba8();
 
-            let texture = RawTexture::new(w as u16, h as u16, img.into_raw(), col_sel);
+            let texture = RawTexture::new(w as u16, h as u16, img.into_raw(), averaging_col);
             if texture.average[3] >= accept_transparent {
                 let _ = tx_clone.send(LoaderMsg::Image(texture));
             }

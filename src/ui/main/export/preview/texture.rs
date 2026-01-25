@@ -9,9 +9,9 @@ pub struct RawTexture {
 }
 
 impl RawTexture {
-    pub fn new(width: u16, height: u16, pixels: Vec<u8>, col_sel: ColSelection) -> Self {
+    pub fn new(width: u16, height: u16, pixels: Vec<u8>, averaging_col: ColSelection) -> Self {
         Self {
-            average: get_average(&pixels, col_sel),
+            average: get_average(&pixels, averaging_col),
             width,
             height,
             texture: pixels
