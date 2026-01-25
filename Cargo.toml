@@ -1,6 +1,6 @@
 [package]
 name = "redriddles"
-version = "1.0.3"
+version = "1.0.2"
 edition = "2024"
 description = "A pixel art editor made for a friend."
 license = "GPL-3.0"
@@ -13,7 +13,7 @@ enum_dispatch = "0.3"
 oklab = "1.1"
 rfd = "=0.16.0"
 bimap = "0.6"
-serde = "1.0"
+serde = { version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 tuple_deref = { path = "tuple_deref" }
 opener = "0.8"
