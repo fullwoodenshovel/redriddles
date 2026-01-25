@@ -10,6 +10,7 @@ use macroquad::prelude::*;
 use super::*;
 // todo!() Add saving colours persistently and colour gradient thing
 // todo!() Add workspaces and importing from a file to automatically make the pixels. Make the current drawing an image
+// todo!() Add autosave and workspace settings.
 // todo!() Add ctrl + z and ctrl + y
 #[derive(Debug)]
 pub struct Texture {
