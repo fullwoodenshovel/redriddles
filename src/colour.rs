@@ -201,6 +201,7 @@ impl Rgba {
     }
 }
 
+const FRAC_1_SQRT_4: f32 = 0.5;
 impl ColType for Rgba {
     fn default_circular() -> f32 {0.0}
     fn default_radial() -> f32 {0.0}
@@ -215,9 +216,9 @@ impl ColType for Rgba {
     }
     
     fn distance(&self, other: [f32; 4]) -> f32 {
-        self.to_vec().distance_squared(Self::from_rgba_arr(other).to_vec())
+        self.to_vec().distance(Self::from_rgba_arr(other).to_vec()) * FRAC_1_SQRT_4
     }
-    
+
     fn from_wheel(circular: f32, radial: f32, scalar: f32) -> Self {
         Self {
             r: circular,
@@ -332,7 +333,7 @@ impl ColType for Hsva {
         let y2 = other.v * other.s * f32::sin(other.h * std::f32::consts::TAU);
         let z2 = other.v * 0.8;
 
-        Vec3::new(x1, y1, z1).distance_squared(Vec3::new(x2, y2, z2))
+        Vec3::new(x1, y1, z1).distance(Vec3::new(x2, y2, z2)) * 0.5
     }
 
     fn from_wheel(circular: f32, radial: f32, scalar: f32) -> Self {
@@ -372,6 +373,7 @@ pub struct OkLab {
     a: f32
 }
 
+const OKLABSCALE: f32 = 0.81050957; // 1 / sqrt(1^2 + (0.277 + 0.234)^2 + (0.199 + 0.312)^2)
 impl ColType for OkLab {
     fn default_circular() -> f32 {0.0}
     fn default_radial() -> f32 {0.0}
@@ -391,7 +393,7 @@ impl ColType for OkLab {
     fn distance(&self, other: [f32; 4]) -> f32 {
         let other = srgb_f32_to_oklab(Rgb { r: other[0], g: other[1], b: other[2] });
 
-        Vec3::new(self.oklab.l, self.oklab.a, self.oklab.b).distance_squared(Vec3::new(other.l, other.a, other.b))
+        Vec3::new(self.oklab.l, self.oklab.a, self.oklab.b).distance(Vec3::new(other.l, other.a, other.b)) * OKLABSCALE
     }
 
     fn from_wheel(circular: f32, radial: f32, scalar: f32) -> Self {
