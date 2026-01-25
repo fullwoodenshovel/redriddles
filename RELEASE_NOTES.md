@@ -1,4 +1,4 @@
-# Redriddles v1.0.3
+# Redriddles v1.0.2
 
 ## What's new
 This is stuff important for the end user, basically the technical changes, but summarised and less important changes ignored.
@@ -39,19 +39,19 @@ This may include technical changes, architectural changes, bug fixes, etc:
 ## Downloads
 
 ### Windows
-- **redriddles-v1.0.3-windows-x86_64.zip**
+- **redriddles-v1.0.2-windows-x86_64.zip**
   1. Extract the ZIP
   2. Open the 'redriddles' folder
   3. Double-click redriddles.exe
 
 ### Linux
-- **redriddles-v1.0.3-linux-x86_64.zip**
+- **redriddles-v1.0.2-linux-x86_64.zip**
   1. Extract the ZIP
   2. Open the 'redriddles' folder in terminal
   3. Run: `./redriddles`
 
 ### macOS
-- **redriddles-v1.0.3-macos.zip**
+- **redriddles-v1.0.2-macos.zip**
   1. Extract the ZIP
   2. Open the 'redriddles' folder
   3. Right-click 'redriddles' and Open (first time only)
