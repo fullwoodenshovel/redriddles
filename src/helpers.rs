@@ -79,6 +79,39 @@ pub fn col_button(rect: Rect, hovered: bool, let_go: bool, default_col: Color, h
     hovered && let_go
 }
 
+// inner_col = ENABLEDCOL
+// border_col = DISABLEDCOL
+// rect = Rect::new(150.0, 280.0, 300.0, 18.0)
+#[allow(clippy::too_many_arguments)]
+pub fn slider(
+    inner_col: Color,
+    border_col: Color,
+    rect: Rect,
+    label: &str,
+    value: f32,
+    min_value: f32,
+    range: f32,
+    user_inputs: &UserInputs,
+    node: &NodeStore
+) -> Option<f32> {
+    draw_text(label, rect.x,rect.y - 10.0, 18.0, BLACK);
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, inner_col);
+    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 4.0, border_col);
+
+    let current_x = (value - min_value) / range * rect.w + rect.x;
+    let y = rect.y + rect.h + 2.0;
+    draw_triangle(vec2(current_x, y), vec2(current_x - 8.0, y + 8.0), vec2(current_x + 8.0, y + 8.0), BLACK);
+
+    if user_inputs.left_mouse_down &&
+        rect.contains(user_inputs.lasttouch_mouse) &&
+        user_inputs.hoverhold_test(node)
+    {
+        Some(((user_inputs.mouse.x - rect.x) / rect.w * range + min_value).clamp(min_value, min_value + range))
+    } else {
+        None
+    }
+}
+
 pub fn arr_to_macroquad(arr: [f32; 4]) -> Color {
     Color {
         r: arr[0],
