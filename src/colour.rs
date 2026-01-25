@@ -157,6 +157,13 @@ impl ColSelection {
         }
     }
 
+    pub fn toggle(&self) -> Self {
+        match self {
+            ColSelection::Rgba => ColSelection::Hsva,
+            ColSelection::Hsva => ColSelection::OkLab,
+            ColSelection::OkLab => ColSelection::Rgba,
+        }
+    }
 }
 
 pub trait ColType {
