@@ -4,13 +4,11 @@ mod process;
 mod texture;
 use texture::RawTexture;
 
-use process::LoaderWrapper;
+use process::{LoaderWrapper, save_img};
 use macroquad::prelude::*;
+
 use super::*;
-// todo!() Add support for changing already existing settings (pixel size, colour space, temperature, transparency filter)
 // todo!() Add exporting just as pixels.
-// todo!() Add warning if image size is above 1920 x 1080
-// todo!() Ensure errors render correctly, as texture preview is now in the same location.
 // BUMP VERSION
 // todo!() Add saving colours persistently and colour gradient thing
 // todo!() Add workspaces and importing from a file to automatically make the pixels. Make the current drawing an image
@@ -123,7 +121,7 @@ impl Preview {
                         let image = match self.texture.as_ref() {
                             Some(image) => image,
                             None => {
-                                self.texture = Some(loader.get_loader_mut().unwrap().generate_image(ctx));
+                                self.texture = Some(loader.get_loader_mut().unwrap().generate_image(ctx.store));
                                 self.texture.as_ref().unwrap()
                             }
                         };
@@ -186,7 +184,8 @@ impl Preview {
 impl Node for Preview {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {        
         let settings = ctx.store.get_mut::<ExportSettings>();
-        
+        let place_rect = settings.place.rect;
+
         if settings.process.changed_this_frame {
             self.texture = None;
             self.texture_loader = None;
@@ -195,18 +194,20 @@ impl Node for Preview {
 
         let place = &mut settings.place;
 
-        if let Some(texture) = &self.texture &&
-            let width = texture.width() &&
-            let height = texture.height()
-            && (width > 1920.0 || height > 1080.0)
-        {
-            draw_text(&format!("WARNING: Size of resulting image is large: {width} x {height}"),220.0, 130.0, 18.0, BLACK);
+        if let Some(texture) = &self.texture {
+            let width = texture.width();
+            let height = texture.height();
+            if width > 1920.0 || height > 1080.0 {
+                draw_text(&format!("WARNING: Size of resulting image is large: {width} x {height}"),220.0, 110.0, 18.0, BLACK);
+            } else {
+                draw_text(&format!("Size of resulting image: {width} x {height}"),220.0, 110.0, 18.0, BLACK);
+            }
         }
         
         if let Some(value) = slider(
             ENABLEDCOL,
             DISABLEDCOL,
-            Rect::new(50.0, 200.0, 300.0, 18.0),
+            Rect::new(50.0, 230.0, 300.0, 18.0),
             &format!("Temperature: {:.2}", place.temperature),
             place.temperature,
             0.0,
@@ -217,15 +218,53 @@ impl Node for Preview {
             place.temperature = value;
         }
 
-        let rect = Rect::new(50.0, 150.0, 300.0, 26.0);
+        let rect = Rect::new(50.0, 180.0, 300.0, 26.0);
         if let Some(Ok(loader)) = self.texture_loader.as_ref().map(|loader| loader.get_loader()) &&
             loader.is_loaded()
         {
             if sub_ui_button(rect, "Regenerate preview", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs) {
-                self.texture = Some(loader.generate_image(ctx));
+                self.texture = Some(loader.generate_image(ctx.store));
             }
         } else {
             disabled_ui_button(rect, "Succesfully load textures first.", DISABLEDCOL);
+        }
+
+        if sub_ui_button(
+            Rect::new(50.0, 130.0, 300.0, 38.0),
+            "Export image as pixels.",
+            ENABLEDCOL,
+            ENABLEDHOVERCOL,
+            node,
+            ctx.user_inputs
+        ) && let Some(out_path) = save_file("Save as") {
+            let pixels = ctx.store.get::<PixelArray>();
+            let rect = place_rect.unwrap_or_else(|| {
+                let [WorldPos(x, y), WorldPos(w, h)] = pixels.get_bounds();
+                Rect::new(x, y, w - x + 1.0, h - y + 1.0)
+            });
+
+            let w = rect.w as u32;
+            let h = rect.h as u32;
+
+            let render_target = render_target(w, h);
+            render_target.texture.set_filter(FilterMode::Nearest);
+            
+            set_camera(&Camera2D {
+                target: vec2(rect.w, rect.h) / 2.0,
+                zoom: 2.0 / vec2(rect.w, rect.h),
+                render_target: Some(render_target.clone()),
+                ..Default::default()
+            });
+            
+            clear_background(BLANK);
+            for pixel in pixels.iter() {
+                draw_rectangle(pixel.pos[0] as f32 - rect.x, pixel.pos[1] as f32 - rect.y, 1.0, 1.0, arr_to_macroquad(pixel.col));
+            }
+
+            set_default_camera();
+
+            // This let is not the best, but with the architecture im using to display errors theres not currently a good solution.
+            let _ = save_img(&render_target.texture.get_texture_data(), out_path);
         }
 
         self.update_loader(ctx, node);
