@@ -10,6 +10,7 @@ use super::*;
 // todo!() Add support for changing already existing settings (pixel size, colour space, temperature, transparency filter)
 // todo!() Add exporting just as pixels.
 // todo!() Add warning if image size is above 1920 x 1080
+// todo!() Ensure errors render correctly, as texture preview is now in the same location.
 // BUMP VERSION
 // todo!() Add saving colours persistently and colour gradient thing
 // todo!() Add workspaces and importing from a file to automatically make the pixels. Make the current drawing an image
@@ -33,12 +34,12 @@ impl Texture {
 
 pub struct Preview {
     texture_loader: Option<LoaderWrapper>,
-    texture: Option<Image>
+    texture: Option<Texture2D>
 }
 
 impl New for Preview {
     fn new(handler: &mut GenHandler) -> Self {
-        handler.push_data(ExportSettings::new(None, 0.01, ColSelection::OkLab, 128, 1.0));
+        handler.push_data(ExportSettings::new(None, 0.0, ColSelection::OkLab, 128, 1.0));
         Self {
             texture_loader: None,
             texture: None
@@ -46,24 +47,51 @@ impl New for Preview {
     }
 }
 
-impl Node for Preview {
-    fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
-        let progress_rect = Rect::new(150.0, 180.0, 300.0, 38.0);
-        let text_rect = Rect::new(150.0, 230.0, 300.0, 38.0);
+impl Preview {
+    fn update_loader(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
+        let progress_rect = Rect::new(400.0, 130.0, 300.0, 38.0);
+        let text_rect = Rect::new(400.0, 180.0, 300.0, 38.0);
         let get_done_rect = |progress| {
             let mut result = progress_rect;
             result.w *= progress;
             result
         };
 
+        if let Some(texture) = &self.texture {
+            let mut target_width = screen_width() - 500.0;
+            let mut target_height = screen_height() - 300.0;
+            let width = texture.width();
+            let height = texture.height();
+
+            let aspect_ratio = width / height;
+            let target_aspect = target_width / target_height;
+
+            if aspect_ratio > target_aspect {
+                target_height = target_width / aspect_ratio;
+            } else {
+                target_width = target_height * aspect_ratio;
+            }
+            
+            draw_texture_ex(
+                texture,
+                400.0,
+                180.0,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(target_width, target_height)),
+                    ..Default::default()
+                });
+        }
+
         match &mut self.texture_loader {
             None => {
                 let settings = ctx.store.get::<ExportSettings>();
+                self.texture = None;
                 match &settings.path {
                     Some(path) => {
                         if sub_ui_button(
                             progress_rect,
-                            "Generate result.",
+                            "Load textures.",
                             DISABLEDCOL,
                             DISABLEDHOVERCOL,
                             node,
@@ -82,7 +110,7 @@ impl Node for Preview {
                     LoaderStatus::Cancelled => {
                         if sub_ui_button(
                             progress_rect,
-                            "Result cancelled. Click to enable.",
+                            "Loading cancelled. Click to enable.",
                             DISABLEDCOL,
                             DISABLEDHOVERCOL,
                             node,
@@ -101,7 +129,7 @@ impl Node for Preview {
                         };
                         if sub_ui_button(
                             progress_rect,
-                            "Result generated. Click to save.",
+                            "Loading finished. Click to save.",
                             ENABLEDCOL,
                             ENABLEDHOVERCOL,
                             node,
@@ -109,17 +137,16 @@ impl Node for Preview {
                         ) &&
                             let Some(out_path) = save_file("Save as")
                         {
-                            loader.get_loader_mut().unwrap().export_png(image, &out_path);
-                            self.texture_loader = None; // todo!() Make this go into the textures loaded but image not generated state
+                            loader.get_loader_mut().unwrap().export_png(&image.get_texture_data(), &out_path);
                         };
                     },
                     LoaderStatus::Loading { frac, current } => {
                         let inner = sub_ui_button(progress_rect, "", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs);
-                        disabled_ui_button(get_done_rect(*frac), "Generating. Click to cancel.", ENABLEDCOL);
+                        disabled_ui_button(get_done_rect(*frac), "Loading textures. Click to cancel.", ENABLEDCOL);
                         let mut current = current.clone();
                         cut_text(&mut current, text_rect.w);
                         disabled_ui_button(text_rect, &current, WHITE);
-
+    
                         if inner {
                             loader.get_loader_mut().unwrap().cancel();
                         }
@@ -128,7 +155,7 @@ impl Node for Preview {
                         multiline_text(text_rect, err);
                         if sub_ui_button(
                             progress_rect,
-                            "Error generating.",
+                            "Error loading textures.",
                             ENABLEDCOL,
                             ENABLEDHOVERCOL,
                             node,
@@ -153,6 +180,55 @@ impl Node for Preview {
                 }
             }
         }
+    }
+}
+
+impl Node for Preview {
+    fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {        
+        let settings = ctx.store.get_mut::<ExportSettings>();
+        
+        if settings.process.changed_this_frame {
+            self.texture = None;
+            self.texture_loader = None;
+            settings.process.changed_this_frame = false;
+        }
+
+        let place = &mut settings.place;
+
+        if let Some(texture) = &self.texture &&
+            let width = texture.width() &&
+            let height = texture.height()
+            && (width > 1920.0 || height > 1080.0)
+        {
+            draw_text(&format!("WARNING: Size of resulting image is large: {width} x {height}"),220.0, 130.0, 18.0, BLACK);
+        }
+        
+        if let Some(value) = slider(
+            ENABLEDCOL,
+            DISABLEDCOL,
+            Rect::new(50.0, 200.0, 300.0, 18.0),
+            &format!("Temperature: {:.2}", place.temperature),
+            place.temperature,
+            0.0,
+            1.0,
+            ctx.user_inputs,
+            node
+        ) {
+            place.temperature = value;
+        }
+
+        let rect = Rect::new(50.0, 150.0, 300.0, 26.0);
+        if let Some(Ok(loader)) = self.texture_loader.as_ref().map(|loader| loader.get_loader()) &&
+            loader.is_loaded()
+        {
+            if sub_ui_button(rect, "Regenerate preview", DISABLEDCOL, DISABLEDHOVERCOL, node, ctx.user_inputs) {
+                self.texture = Some(loader.generate_image(ctx));
+            }
+        } else {
+            disabled_ui_button(rect, "Succesfully load textures first.", DISABLEDCOL);
+        }
+
+        self.update_loader(ctx, node);
     }
 
     fn hit_detect(&mut self, pos: Vec2, node: &NodeStore, store: &mut Store) -> Vec<WeakNode> {

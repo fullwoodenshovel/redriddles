@@ -54,13 +54,12 @@ impl CancelToken {
 }
 
 #[derive(Debug)]
-struct AsyncTextureLoader {
+pub struct AsyncTextureLoader {
     rx: Receiver<LoaderMsg>,
     cancel: CancelToken,
     status: LoaderStatus,
     textures: Vec<Texture>,
     loaded: usize,
-    result: Option<Image>
 }
 
 pub struct LoaderWrapper {
@@ -74,42 +73,24 @@ impl LoaderWrapper {
         }
     }
 
-    pub fn cancel(&mut self) {
-        self.loader.as_mut().unwrap().cancel();
+    pub fn get_loader(&self) -> Result<&AsyncTextureLoader, &LoaderStatus> {
+        self.loader.as_ref()
     }
 
-    pub fn get_status(&mut self, ctx: &mut AppContextHandler) -> &mut LoaderStatus {
+    pub fn get_loader_mut(&mut self) -> Result<&mut AsyncTextureLoader, &mut LoaderStatus> {
+        self.loader.as_mut()
+    }
+
+    pub fn get_status(&mut self) -> &LoaderStatus {
         match &mut self.loader {
-            Ok(loader) => loader.get_status(ctx),
+            Ok(result) => result.get_status(),
             Err(err) => err
-        }
-    }
-
-    pub fn reset_save_err(&mut self) {
-        self.loader.as_mut().unwrap().reset_save_err()
-    }
-
-    pub fn export_png(&mut self, path: impl AsRef<std::path::Path>) {
-        self.loader.as_mut().unwrap().export_png(path);
-    }
-
-    pub fn try_get_img(&self) -> Result<&Image, String> {
-        match match self.loader.as_ref() { // match match :)
-            Ok(result) => result,
-            Err(err) => if let LoaderStatus::GenError(err) = err {
-                return Err(err.clone())
-            } else {
-                panic!("The err variant of LoaderWrapper should always be GenError")
-            }
-        }.result.as_ref() {
-            Some(result) => Ok(result),
-            None => Err("First load in a texture file.".to_string())
         }
     }
 }
 
 impl AsyncTextureLoader {
-    pub fn with_folder(path: PathBuf, settings: ProcessSettings) -> Result<Self, String> {
+    fn with_folder(path: PathBuf, settings: ProcessSettings) -> Result<Self, String> {
         let mut files = Vec::new();
         let mut folders = Vec::new();
 
@@ -142,13 +123,20 @@ impl AsyncTextureLoader {
         Ok(Self::new(files, settings))
     }
 
-    pub fn new(paths: Vec<PathBuf>, process_settings: ProcessSettings) -> Self {
+    fn new(paths: Vec<PathBuf>, process_settings: ProcessSettings) -> Self {
         let (tx, rx) = unbounded();
         let cancel = CancelToken::new();
         let cancel_clone = cancel.clone();
 
         thread::spawn(move || {
-            load_images_parallel(paths, tx, cancel_clone, process_settings.col_sel, Some(process_settings.pixel_size));
+            load_images_parallel(
+                paths,
+                tx,
+                cancel_clone,
+                process_settings.col_sel,
+                Some(process_settings.pixel_size),
+                process_settings.accept_transparent
+            );
         });
 
         Self {
@@ -157,7 +145,6 @@ impl AsyncTextureLoader {
             status: LoaderStatus::Loading { frac: 0.0, current: "Initialising.".to_string() },
             textures: Vec::new(),
             loaded: 0,
-            result: None
         }
     }
 
@@ -166,7 +153,11 @@ impl AsyncTextureLoader {
         self.cancel.cancel();
     }
 
-    pub fn get_status(&mut self, ctx: &mut AppContextHandler) -> &mut LoaderStatus {
+    pub fn is_loaded(&self) -> bool {
+        matches!(self.status, LoaderStatus::Done)
+    }
+
+    pub fn get_status(&mut self) -> &LoaderStatus {
         if !matches!(self.status, LoaderStatus::SaveError(_) | LoaderStatus::GenError(_) | LoaderStatus::Done | LoaderStatus::Cancelled) {
             while let Ok(result) = self.rx.try_recv() {
                 match result {
@@ -180,7 +171,6 @@ impl AsyncTextureLoader {
                             self.status = LoaderStatus::GenError("Couldn't find any valid image files in that folder.".to_string());
                         } else {
                             self.status = LoaderStatus::Done;
-                            self.result = Some(generate_image(std::mem::take(&mut self.textures), ctx));
                             break;
                         }
                     },
@@ -202,10 +192,18 @@ impl AsyncTextureLoader {
         }
     }
 
-    pub fn export_png(&mut self, path: impl AsRef<std::path::Path>) {
-        if let Err(err) = save_img(self.result.as_ref().unwrap(), path) {
+    pub fn export_png(&mut self, image: &Image, path: impl AsRef<std::path::Path>) {
+        if let Err(err) = save_img(image, path) {
             self.status = LoaderStatus::SaveError(err.to_string())
         }
+    }
+
+    pub fn generate_image(&self, ctx: &mut AppContextHandler) -> Texture2D {
+        generate_image(&self.textures, ctx)
+    }
+
+    pub fn set_status(&mut self, status: LoaderStatus) {
+        self.status = status;
     }
 }
 
@@ -226,7 +224,7 @@ pub fn save_img(img: &Image, path: impl AsRef<std::path::Path>) -> Result<(), im
     buffer.save(path)
 }
 
-fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Image {
+fn generate_image(textures: &[Texture], ctx: &mut AppContextHandler) -> Texture2D {
     let settings = ctx.store.get::<ExportSettings>();
     let pixel_size = settings.process.pixel_size as f32;
     let pixel_int = settings.process.pixel_size;
@@ -274,15 +272,14 @@ fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Image 
         }
     } else {
         for pixel in pixels.iter() {
-            // store colour difference per texture, stored in a vector of tuples, then generate random nhmber between 0 and 1 and calculate cumulative until exceeding a value
             let x = pixel.pos[0] as f32 - rect.x;
             let y = pixel.pos[1] as f32 - rect.y;
             let col = col_sel.col_from_rgba_arr(pixel.col);
             let mut total = 0.0;
-            let a = (settings.place.temperature - 1.0) / settings.place.temperature;
+            let a = 1.0 - 1.0 / settings.place.temperature;
 
             let mut raw = Vec::new();
-            for texture in &textures {
+            for texture in textures {
                 let cost = col.distance(texture.average);
                 let prob = (a * cost).exp();
                 total += prob;
@@ -312,7 +309,7 @@ fn generate_image(textures: Vec<Texture>, ctx: &mut AppContextHandler) -> Image 
 
     set_default_camera();
 
-    render_target.texture.get_texture_data()
+    render_target.texture
 }
 
 fn is_likely_image_file(path: &Path) -> bool {
@@ -334,7 +331,8 @@ fn load_images_parallel(
     tx: Sender<LoaderMsg>,
     cancel: CancelToken,
     col_sel: ColSelection,
-    pixel_size: Option<u32>
+    pixel_size: Option<u32>,
+    accept_transparent: f32
 ) {
     let total = paths.len();
 
@@ -381,7 +379,10 @@ fn load_images_parallel(
 
             let img = img.to_rgba8();
 
-            let _ = tx_clone.send(LoaderMsg::Image(RawTexture::new(w as u16, h as u16, img.into_raw(), col_sel)));
+            let texture = RawTexture::new(w as u16, h as u16, img.into_raw(), col_sel);
+            if texture.average[3] >= accept_transparent {
+                let _ = tx_clone.send(LoaderMsg::Image(texture));
+            }
 
             let _ = tx_clone.send(LoaderMsg::Progress {
                 loaded: 1,

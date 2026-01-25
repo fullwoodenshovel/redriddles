@@ -17,7 +17,11 @@ impl New for SelectFolder {
 impl Node for SelectFolder {
     fn update(&mut self, ctx: &mut AppContextHandler, node: &NodeStore) {
         let rect = Rect::new(28.0, 100.0, 150.0, 38.0);
-        let selected_path: &mut Option<PathBuf> = &mut ctx.store.get_mut::<ExportSettings>().path;
+        let settings = ctx.store.get_mut::<ExportSettings>();
+        let selected_path = &mut settings.path;
+        let changed = &mut settings.process.changed_this_frame;
+
+        draw_text("Changing this requires textures to be reloaded.", 220.0, 130.0, 18.0, BLACK);
         if sub_ui_button(rect, "Select new folder", ENABLEDCOL, ENABLEDHOVERCOL, node, ctx.user_inputs) &&
             let Some(folder) = pick_folder("Select a folder")
         {
@@ -27,6 +31,7 @@ impl Node for SelectFolder {
                 ctx.save_data.cached_dirs.pop_back();
             }
             *selected_path = Some(ctx.save_data.cached_dirs.front().unwrap().clone());
+            *changed = true;
         }
 
         let rect = Rect::new(28.0, 150.0, screen_width() - 200.0, 28.0);
@@ -44,7 +49,8 @@ impl Node for SelectFolder {
             ) {
                 ctx.save_data.cached_dirs.remove(index);
                 ctx.save_data.cached_dirs.push_front(path.clone());
-                *selected_path = Some(path.clone())
+                *selected_path = Some(path.clone());
+                *changed = true;
             }
             if sub_ui_button(
                 Rect::new(rect.w + 50.0, 150.0 + 38.0 * index as f32, 100.0, 28.0),
