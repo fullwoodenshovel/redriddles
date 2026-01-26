@@ -150,7 +150,7 @@ These are the new features:
 ${BULLET_SUMMARY}
 
 ## Technical changes
-These are all of the new commits from this release (ignoring repeats).
+These are all of the important new commits from this release.
 This may include technical changes, architectural changes, bug fixes, etc:
 
 ${BULLET_COMMITS}
