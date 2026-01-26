@@ -273,6 +273,7 @@ impl Node for Preview {
 
             set_default_camera();
 
+            // todo!() fix this v
             // This let is not the best, but with the architecture im using to display errors theres not currently a good solution.
             let _ = save_img(&render_target.texture.get_texture_data(), out_path);
         }
