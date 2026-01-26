@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use opener::open;
 use std::fs;
 
