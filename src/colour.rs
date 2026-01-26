@@ -176,7 +176,7 @@ pub trait ColType {
     fn distance(&self, other: [f32; 4]) -> f32;
     fn from_wheel(circular: f32, radial: f32, scalar: f32) -> Self where Self: Sized;
     fn to_wheel(&self) -> (f32, f32, f32);
-    fn gradient(&self, other: [f32; 4], start_index: u8, end_index: u8, len: u8) -> Vec<Self> where Self: Sized;
+    fn gradient(&self, other: [f32; 4], frac: f32) -> Self where Self: Sized;
 
     fn from_rgba_arr(arr: [f32; 4]) -> Self where Self: std::marker::Sized {
         Self::from_rgba(arr[0], arr[1], arr[2], arr[3])
@@ -239,21 +239,11 @@ impl ColType for Rgba {
         (self.r, self.g, self.b)
     }
 
-    fn gradient(&self, other: [f32; 4], start_index: u8, end_index: u8, len: u8) -> Vec<Self> {
+    fn gradient(&self, other: [f32; 4], frac: f32) -> Self {
         let vec = self.to_vec();
         let other = Vec4::from_array(other);
 
-        let change = (other - vec) / (end_index - start_index) as f32;
-        let initial = vec - change * start_index as f32;
-
-        let mut result = vec![];
-
-        for i in 0..len {
-            let current = initial + change * i as f32;
-            result.push(Self::from_rgba_arr(current.to_array()));
-        }
-
-        result
+        Self::from_rgba_arr(vec.lerp(other, frac).to_array())
     }
 }
 
@@ -356,7 +346,7 @@ impl ColType for Hsva {
         (self.h, self.s, self.v)
     }
 
-    fn gradient(&self, _other: [f32; 4], _start_index: u8, _end_index: u8, _len: u8) -> Vec<Self> where Self: Sized {
+    fn gradient(&self, _other: [f32; 4], frac: f32) -> Self {
         todo!();
     }
 }
@@ -421,11 +411,29 @@ impl ColType for OkLab {
         )
     }
 
-    fn gradient(&self, _other: [f32; 4], _start_index: u8, _end_index: u8, _len: u8) -> Vec<Self> where Self: Sized {
-        todo!();
-        // vec![Self {
-        //     oklab: Oklab { l: 0.0, a: 0.0, b: 0.0 },
-        //     a: 1.0
-        // }; len as usize]
+    fn gradient(&self, other: [f32; 4], frac: f32) -> Self {
+        Self::from_vec(
+            self.to_vec().lerp(
+                Self::from_rgba_arr(other).to_vec(),
+                frac
+            )
+        )
+    }
+}
+
+impl OkLab {
+    fn to_vec(self) -> Vec4 {
+        Vec4::new(self.oklab.l, self.oklab.a, self.oklab.b, self.a)
+    }
+
+    fn from_vec(vec: Vec4) -> Self {
+        Self {
+            oklab: Oklab {
+                l: vec.x,
+                a: vec.y,
+                b: vec.z
+            },
+            a: vec.w
+        }
     }
 }
