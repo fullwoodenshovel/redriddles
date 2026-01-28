@@ -346,8 +346,27 @@ impl ColType for Hsva {
         (self.h, self.s, self.v)
     }
 
-    fn gradient(&self, _other: [f32; 4], frac: f32) -> Self {
-        todo!();
+    fn gradient(&self, other: [f32; 4], frac: f32) -> Self {
+        let other = Self::from_rgba_arr(other);
+
+        let x1 = self.v * self.s * f32::cos(self.h * std::f32::consts::TAU);
+        let y1 = self.v * self.s * f32::sin(self.h * std::f32::consts::TAU);
+        let z1 = self.v;
+        let w1 = self.a;
+
+        let x2 = other.v * other.s * f32::cos(other.h * std::f32::consts::TAU);
+        let y2 = other.v * other.s * f32::sin(other.h * std::f32::consts::TAU);
+        let z2 = other.v;
+        let w2 = other.a;
+
+        let result = Vec4::new(x1, y1, z1, w1).lerp(Vec4::new(x2, y2, z2, w2), frac);
+
+        let v = result.z;
+        let h = f32::atan2(result.y, result.x) / std::f32::consts::TAU;
+        let s = result.y / v / f32::sin(h * std::f32::consts::TAU);
+        let a = result.w;
+        
+        Self { h, s, v, a } // todo!() CHECK this works
     }
 }
 
