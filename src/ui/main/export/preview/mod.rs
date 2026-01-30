@@ -12,6 +12,24 @@ use super::*;
 // todo!() Add workspaces and importing from a file to automatically make the pixels. Make the current drawing an image
 // todo!() Add autosave and workspace settings.
 // todo!() Add ctrl + z and ctrl + y
+
+// How workspaces will work:
+// On initial run:
+//   there will be no workspace selected, and the main name will be in italics with an asterisk
+//   when the user triees to delete the window, it will tell them their changes are not saved because they are not in a workspace
+//   this tells them to create a new workspace in the workspaces tab or exit without saving
+// On subsequent runs:
+//   workspaces will be selected automatically from the last workspace, but they can be unselected to return to initial state
+//   workspaces are stored as folders with the workspace name inside of the workspaces folder
+//   workspaces will store current pixel image, saved colours, current colour, last position, cached dirs
+//
+// In settings, they can chose to either:
+//   save on exit
+//   save after some time period
+//   do not save automatically (and they have to use ctrl + s) 
+//
+// data.json will store:
+//   shortcuts
 #[derive(Debug)]
 pub struct Texture {
     texture: Texture2D,
