@@ -201,10 +201,6 @@ impl AsyncTextureLoader {
     pub fn generate_image(&self, store: &mut Store) -> Texture2D {
         generate_image(&self.textures, store)
     }
-
-    pub fn set_status(&mut self, status: LoaderStatus) {
-        self.status = status;
-    }
 }
 
 use image::{ImageBuffer, Rgba};
