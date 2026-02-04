@@ -12,6 +12,8 @@ mod expanded_keycode;
 
 use macroquad::prelude::*;
 
+use crate::ui::multiline_text;
+
 
 struct AppContext {
     user_inputs: UserInputs,
@@ -462,11 +464,11 @@ impl Frame {
         let mut ctx = AppContextGenHandler::new();
         let origin = NodeStore::origin::<T>(&mut ctx);
         let user_inputs = UserInputs::new(&origin);
-        let ctx = ctx.into_context(user_inputs);
+        let ctx = ctx.into_context(user_inputs)?;
         Ok(Self {
-                    origin,
-                    ctx: ctx?
-                })
+            origin,
+            ctx
+        })
     }
     
     async fn update(&mut self) {
@@ -506,17 +508,7 @@ impl ResultFrame {
             Err(reason) => {
                 loop {
                     clear_background(WHITE);
-                    let mut y = 52.0;
-                    for line in reason.split("\n") {
-                        draw_text(
-                            line,
-                            26.0,
-                            y,
-                            20.0,
-                            BLACK,
-                        );
-                        y += 26.0;
-                    }
+                    multiline_text(Rect::new(26.0, 52.0, screen_width() - 52.0, screen_height() - 104.0), reason, 20);
                 
                     next_frame().await
                 }
