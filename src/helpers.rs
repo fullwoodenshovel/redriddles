@@ -49,27 +49,27 @@ pub fn disabled_ui_button(rect: Rect, label: &str, col: Color) {
     );
 }
 
-pub fn multiline_text(rect: Rect, label: &str) {
-    let mut lines = label.split("\n").map(|d| d.to_string()).collect::<Vec<_>>();
+pub fn multiline_text(rect: Rect, text: &str, size: u16) {
+    let mut lines = text.split("\n").map(|d| d.to_string()).collect::<Vec<_>>();
     let mut index = 0;
     while index != lines.len() {
         let cut = lines[index].split(" ").map(|d| d.to_string()).collect::<Vec<_>>();
-        let mut j = cut.len() - 1;
-        while measure_text(&cut[..j].join(" "), None, 18, 1.0).width > rect.w && j != 0 {
+        let mut j = cut.len();
+        while measure_text(&cut[..j].join(" "), None, size, 1.0).width > rect.w && j != 0 {
             j -= 1;
         }
 
         if j == 0 {
             let mut result = lines[index].to_string();
             j = result.len();
-            while measure_text(&result[..j], None, 18, 1.0).width > rect.w && j != 1 {
+            while measure_text(&result[..j], None, size, 1.0).width > rect.w && j != 1 {
                 j -= 1;
             }
             if j != result.len() {
                 lines.insert(index + 1, result.split_off(j));
                 lines[index] = result;
             }
-        } else if j != cut.len() - 1 {
+        } else if j != cut.len() {
             lines.insert(index + 1, cut[j..].join(" ").to_string());
             lines[index] = cut[..j].join(" ").to_string();
         }
@@ -77,12 +77,13 @@ pub fn multiline_text(rect: Rect, label: &str) {
         index += 1;
     }
 
+    let step = size as f32 * 1.444;
     for (index, line) in lines.iter().enumerate() {
         draw_text(
             line,
-            rect.x + 8.0,
-            rect.y + index as f32 * 26.0,
-            18.0,
+            rect.x,
+            rect.y + index as f32 * step,
+            size as f32,
             BLACK,
         );
     }    
