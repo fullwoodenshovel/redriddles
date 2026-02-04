@@ -12,6 +12,7 @@ use super::*;
 // todo!() Add workspaces and importing from a file to automatically make the pixels. Make the current drawing an image
 // todo!() Add autosave and workspace settings.
 // todo!() Add ctrl + z and ctrl + y
+// todo!() Add settings for low memory usage or normal memory usage (load all textures into RAM or only resized ones)
 
 // How workspaces will work:
 // On initial run:
@@ -167,7 +168,7 @@ impl Preview {
                         }
                     },
                     LoaderStatus::GenError(err) => {
-                        multiline_text(text_rect, err);
+                        multiline_text(text_rect, err, 18);
                         if sub_ui_button(
                             progress_rect,
                             "Error loading textures.",
@@ -180,7 +181,7 @@ impl Preview {
                         };
                     },
                     LoaderStatus::SaveError(err) => {
-                        multiline_text(text_rect, err);
+                        multiline_text(text_rect, err, 18);
                         if sub_ui_button(
                             progress_rect,
                             "Error saving file.",
